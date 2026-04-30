@@ -66,7 +66,7 @@ function App() {
         
         <div className="nav-search">
           <Search className="search-icon" size={18} />
-          <input type="text" placeholder="Search the town square..." />
+          <input type="text" placeholder="Search Rural & Reckless..." />
         </div>
 
         <div className="nav-actions">

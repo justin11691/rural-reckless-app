@@ -10,7 +10,7 @@ export function Sidebar({ activeTab, setActiveTab, avatar }: SidebarProps) {
   return (
     <aside className="sidebar">
       <a href="#" className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
-        <Home size={20} /> Town Square
+        <Home size={20} /> The Feed
       </a>
       <a href="#" className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
         <img src={avatar} alt="Profile" className="avatar-small" style={{width: 20, height: 20}} /> 

@@ -59,7 +59,7 @@ export function Auth() {
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', color: 'var(--color-pine-primary)' }}>
           <TreePine size={48} />
         </div>
-        <h2 style={{ marginBottom: '0.5rem' }}>Welcome to the Town Square</h2>
+        <h2 style={{ marginBottom: '0.5rem' }}>Welcome to Rural & Reckless</h2>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: '2rem' }}>
           {isSignUp ? 'Create your account to start sharing.' : 'Sign in to access your storefront and communities.'}
         </p>
