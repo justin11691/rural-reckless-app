@@ -79,7 +79,7 @@ export function Feed() {
 
       {/* Posts Feed */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>Loading the town square...</div>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>Loading Rural & Reckless...</div>
       ) : posts.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>No posts yet. Be the first to share something!</div>
       ) : (

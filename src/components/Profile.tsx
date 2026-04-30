@@ -82,7 +82,7 @@ export function Profile() {
             <h1>{profile?.full_name || profile?.username || 'Anonymous Maker'}</h1>
             <button className="follow-btn"><UserPlus size={16} /> Follow</button>
           </div>
-          <p className="profile-tagline">{profile?.tagline || 'A new member of the Town Square'}</p>
+          <p className="profile-tagline">{profile?.tagline || 'A new member of Rural & Reckless'}</p>
         </div>
       </div>
 
