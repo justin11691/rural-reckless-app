@@ -7,7 +7,26 @@ export function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [message, setMessage] = useState('');
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setMessage('Please enter your email address first.');
+      return;
+    }
+    setLoading(true);
+    setMessage('');
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMessage('Password reset link sent to your email!');
+      setIsResettingPassword(false);
+    }
+    setLoading(false);
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,30 +80,58 @@ export function Auth() {
         </div>
         <h2 style={{ marginBottom: '0.5rem' }}>Welcome to Rural & Reckless</h2>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: '2rem' }}>
-          {isSignUp ? 'Create your account to start sharing.' : 'Sign in to access your storefront and communities.'}
+          {isResettingPassword ? 'Enter your email to receive a password reset link.' : (isSignUp ? 'Create your account to start sharing.' : 'Sign in to access your storefront and communities.')}
         </p>
 
-        <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <input
-            className="post-input"
-            type="email"
-            placeholder="Your email address"
-            value={email}
-            required
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            className="post-input"
-            type="password"
-            placeholder="Your password"
-            value={password}
-            required
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.75rem', fontSize: '1.1rem' }}>
-            {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-          </button>
-        </form>
+        {isResettingPassword ? (
+          <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <input
+              className="post-input"
+              type="email"
+              placeholder="Your email address"
+              value={email}
+              required
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.75rem', fontSize: '1.1rem' }}>
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+            <button type="button" onClick={() => setIsResettingPassword(false)} style={{ background: 'transparent', color: 'var(--color-text-muted)', marginTop: '0.5rem', cursor: 'pointer', border: 'none' }}>
+              Back to Sign In
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <input
+              className="post-input"
+              type="email"
+              placeholder="Your email address"
+              value={email}
+              required
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              className="post-input"
+              type="password"
+              placeholder="Your password"
+              value={password}
+              required
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.75rem', fontSize: '1.1rem' }}>
+              {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+            </button>
+            {!isSignUp && (
+              <button 
+                type="button" 
+                onClick={() => setIsResettingPassword(true)}
+                style={{ background: 'transparent', color: 'var(--color-pine-primary)', fontSize: '0.9rem', marginTop: '0.5rem', cursor: 'pointer', border: 'none', textDecoration: 'underline' }}
+              >
+                Forgot Password?
+              </button>
+            )}
+          </form>
+        )}
 
         {message && (
           <div style={{ marginTop: '1rem', color: 'var(--color-accent)', fontWeight: '500' }}>
@@ -92,19 +139,21 @@ export function Auth() {
           </div>
         )}
 
-        <div style={{ marginTop: '2rem', borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-            <button 
-              type="button" 
-              className="action-btn"
-              onClick={() => setIsSignUp(!isSignUp)}
-              style={{ display: 'inline', color: 'var(--color-pine-primary)', fontWeight: 'bold', marginLeft: '0.5rem', background: 'transparent' }}
-            >
-              {isSignUp ? 'Sign In' : 'Sign Up'}
-            </button>
-          </p>
-        </div>
+        {!isResettingPassword && (
+          <div style={{ marginTop: '2rem', borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              <button 
+                type="button" 
+                className="action-btn"
+                onClick={() => setIsSignUp(!isSignUp)}
+                style={{ display: 'inline', color: 'var(--color-pine-primary)', fontWeight: 'bold', marginLeft: '0.5rem', background: 'transparent', cursor: 'pointer', border: 'none' }}
+              >
+                {isSignUp ? 'Sign In' : 'Sign Up'}
+              </button>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
