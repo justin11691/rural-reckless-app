@@ -36,11 +36,19 @@ function ManagePanel({ group, currentUserId, onClose, onRefresh }: {
   async function loadMembers() {
     const { data } = await supabase
       .from('group_members')
-      .select('*, profiles:user_id(username, full_name, avatar_url)')
+      .select('id, group_id, user_id, role, status')
       .eq('group_id', group.id);
     if (data) {
-      setMembers(data.filter((m:any) => m.status === 'active'));
-      setPending(data.filter((m:any) => m.status === 'pending'));
+      // Fetch profiles separately
+      const uids = [...new Set(data.map((m:any)=>m.user_id))];
+      let profileMap: Record<string,any> = {};
+      if (uids.length > 0) {
+        const { data: profs } = await supabase.from('profiles').select('id,username,full_name,avatar_url').in('id', uids);
+        (profs||[]).forEach((p:any)=>{ profileMap[p.id]=p; });
+      }
+      const withProfiles = data.map((m:any)=>({ ...m, profiles: profileMap[m.user_id]||null }));
+      setMembers(withProfiles.filter((m:any) => m.status === 'active'));
+      setPending(withProfiles.filter((m:any) => m.status === 'pending'));
     }
   }
 
@@ -200,14 +208,14 @@ export function GroupPage() {
     const { data: g } = await supabase.from('communities').select('*').eq('id', id).single();
     setGroup(g);
 
-    // Load posts for this group
-    const { data: rawPosts } = await supabase
+    // Load posts for this group — gracefully handle missing group_id column
+    const { data: rawPosts, error: postsErr } = await supabase
       .from('posts')
-      .select('*')
+      .select('id, user_id, content, image_url, created_at, group_id')
       .eq('group_id', id)
       .order('created_at', { ascending: false });
 
-    if (rawPosts && rawPosts.length > 0) {
+    if (!postsErr && rawPosts && rawPosts.length > 0) {
       const userIds = [...new Set(rawPosts.map((p:any) => p.user_id))];
       const { data: profiles } = await supabase.from('profiles').select('id,full_name,username,avatar_url').in('id', userIds);
       const profileMap: Record<string,any> = {};
@@ -217,14 +225,23 @@ export function GroupPage() {
       setPosts([]);
     }
 
-    // Load members (preview — top 10 active)
-    const { data: mem } = await supabase
+    // Load members (preview — top 10 active) using separate profile fetch
+    const { data: rawMem } = await supabase
       .from('group_members')
-      .select('*, profiles:user_id(id,full_name,username,avatar_url)')
+      .select('id, user_id, role, status')
       .eq('group_id', id)
       .eq('status', 'active')
       .limit(10);
-    setMembers(mem||[]);
+    
+    if (rawMem && rawMem.length > 0) {
+      const memUids = [...new Set(rawMem.map((m:any)=>m.user_id))];
+      const { data: memProfs } = await supabase.from('profiles').select('id,full_name,username,avatar_url').in('id', memUids);
+      const memProfMap: Record<string,any> = {};
+      (memProfs||[]).forEach((p:any)=>{ memProfMap[p.id]=p; });
+      setMembers(rawMem.map((m:any)=>({ ...m, profiles: memProfMap[m.user_id]||null })));
+    } else {
+      setMembers([]);
+    }
 
     // Membership status for current user
     if (uid) {

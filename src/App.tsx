@@ -41,10 +41,10 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Sync active tab from URL
+  // Sync active tab from URL — use first path segment only
   useEffect(() => {
-    const tab = location.pathname.replace('/', '') || 'home';
-    setActiveTab(tab);
+    const segment = location.pathname.split('/').filter(Boolean)[0] || 'home';
+    setActiveTab(segment);
     setMobileNavOpen(false); // close nav on route change
   }, [location]);
 

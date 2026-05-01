@@ -53,8 +53,28 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     let commentsMap: Record<string, any[]> = {};
     
     if (postIds.length > 0) {
-      const { data: likes } = await supabase.from('post_likes').select('post_id, user_id').in('post_id', postIds);
-      const { data: comments } = await supabase.from('post_comments').select('*, profiles:user_id(username, full_name, avatar_url)').in('post_id', postIds).order('created_at', { ascending: true });
+      const { data: likes } = await supabase
+        .from('post_likes')
+        .select('post_id, user_id')
+        .in('post_id', postIds);
+
+      // Fetch comments WITHOUT embedded join (avoids 400 if FK not registered)
+      const { data: comments } = await supabase
+        .from('post_comments')
+        .select('id, post_id, user_id, content, created_at')
+        .in('post_id', postIds)
+        .order('created_at', { ascending: true });
+
+      // Fetch comment authors separately
+      const commentUserIds = [...new Set((comments||[]).map((c:any)=>c.user_id))];
+      let commentProfileMap: Record<string,any> = {};
+      if (commentUserIds.length > 0) {
+        const { data: cProfiles } = await supabase
+          .from('profiles')
+          .select('id, username, full_name, avatar_url')
+          .in('id', commentUserIds);
+        (cProfiles||[]).forEach((p:any)=>{ commentProfileMap[p.id]=p; });
+      }
       
       (likes || []).forEach(l => {
         if (!likesMap[l.post_id]) likesMap[l.post_id] = { count: 0, me: false };
@@ -62,9 +82,9 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
         if (currentUser && l.user_id === currentUser.id) likesMap[l.post_id].me = true;
       });
       
-      (comments || []).forEach(c => {
+      (comments || []).forEach((c:any) => {
         if (!commentsMap[c.post_id]) commentsMap[c.post_id] = [];
-        commentsMap[c.post_id].push(c);
+        commentsMap[c.post_id].push({ ...c, profiles: commentProfileMap[c.user_id]||null });
       });
     }
 
@@ -249,7 +269,7 @@ function ForYouFeed({ currentUser }: { currentUser: any }) {
     if (currentUser) {
       const { data: memberships } = await supabase
         .from('group_members')
-        .select('groups:group_id(category)')
+        .select('communities:group_id(category)')
         .eq('user_id', currentUser.id)
         .eq('status', 'active');
       if (memberships) {
