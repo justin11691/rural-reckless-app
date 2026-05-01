@@ -245,11 +245,11 @@ export function Apps() {
   return (
     <div style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', overflowX: 'hidden' }}>
       {/* Hero */}
-      <div className="card" style={{ padding: '2rem', background: 'linear-gradient(135deg, var(--color-pine-dark), var(--color-accent))', color: 'white' }}>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: 0, fontSize: '1.8rem', flexWrap: 'wrap' }}>
+      <div className="card" style={{ padding: '2rem', background: 'var(--color-pine-dark)', color: 'white' }}>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: 0, fontSize: '1.8rem', flexWrap: 'wrap', color: 'white' }}>
           <ShoppingCart size={30} aria-hidden /> Digital Goods &amp; Publishing
         </h1>
-        <p style={{ marginTop: '0.5rem', opacity: 0.9, lineHeight: 1.6 }}>
+        <p style={{ marginTop: '0.5rem', opacity: 0.9, lineHeight: 1.6, color: 'white' }}>
           Sell your e-books, short stories, configs, templates, and tools — get paid by card or crypto, directly.
         </p>
       </div>

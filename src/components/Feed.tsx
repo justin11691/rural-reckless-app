@@ -28,12 +28,24 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
 
   async function fetchPosts() {
     setError('');
-    const { data, error: e } = await supabase
+    const { data: postsData, error: e } = await supabase
       .from('posts')
-      .select('*, profiles:user_id(username, full_name, avatar_url, tagline)')
+      .select('*')
       .order('created_at', { ascending: false });
-    if (e) setError('Could not load posts. Try refreshing.');
-    else setPosts(data || []);
+    if (e) { setError('Could not load posts. Try refreshing.'); setLoading(false); return; }
+
+    // Fetch profile info separately for each unique user
+    const userIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
+    let profileMap: Record<string, any> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url, tagline')
+        .in('id', userIds);
+      (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
+    }
+
+    setPosts((postsData || []).map((p: any) => ({ ...p, profiles: profileMap[p.user_id] || null })));
     setLoading(false);
   }
 

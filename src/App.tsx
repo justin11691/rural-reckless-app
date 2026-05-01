@@ -130,7 +130,7 @@ function App() {
         <Routes>
           <Route path="/" element={
             <>
-              <SidebarWithNav />
+              <div className="desktop-sidebar"><SidebarWithNav /></div>
               <Feed />
               <aside className="sidebar right-sidebar" aria-label="Trending storefronts">
                 <div className="card">

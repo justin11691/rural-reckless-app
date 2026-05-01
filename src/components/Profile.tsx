@@ -337,7 +337,7 @@ export function Profile() {
         <div className="profile-main">
           <div className="profile-card storefront-card">
             <div className="storefront-header">
-              <h3><ShoppingBag size={18} aria-hidden /> Storefront</h3>
+              <h3><ShoppingBag size={18} aria-hidden /> {profile?.full_name || profile?.username || 'My'}'s Shop</h3>
               <button className="view-all-btn">View All</button>
             </div>
             <div className="storefront-grid">
