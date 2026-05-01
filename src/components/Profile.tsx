@@ -6,6 +6,7 @@ export function Profile() {
   const [profile, setProfile] = useState<any>(null);
   const [isEditingTheme, setIsEditingTheme] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [myListings, setMyListings] = useState<any[]>([]);
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileFormData, setProfileFormData] = useState({
@@ -43,6 +44,17 @@ export function Profile() {
     if (error && error.code !== 'PGRST116') {
       console.error('Error fetching profile:', error);
     }
+
+    // Fetch user's listings
+    const { data: physical } = await supabase.from('market_listings').select('*').eq('user_id', session.user.id);
+    const { data: digital } = await supabase.from('digital_products').select('*').eq('owner_id', session.user.id);
+    
+    const combined = [
+      ...(physical || []).map((i: any) => ({ ...i, isDigital: false })),
+      ...(digital || []).map((i: any) => ({ ...i, isDigital: true }))
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    setMyListings(combined);
 
     if (data) {
       setProfile(data);
@@ -357,21 +369,24 @@ export function Profile() {
               <button className="view-all-btn">View All</button>
             </div>
             <div className="storefront-grid">
-              <div className="store-item">
-                <img src="/images/post_3d_print.png" alt="Geometric White Vase" />
-                <div className="store-item-info">
-                  <h4>Geometric White Vase</h4>
-                  <span className="price">$24.99</span>
-                </div>
-              </div>
-              <div className="store-item app-item">
-                <div className="app-icon" aria-hidden>S3D</div>
-                <div className="store-item-info">
-                  <h4>Slice3D Config App</h4>
-                  <p className="app-desc">My custom slicer settings</p>
-                  <span className="price">$4.99</span>
-                </div>
-              </div>
+              {myListings.length === 0 ? (
+                <p style={{ color: 'var(--profile-text)', opacity: 0.6, fontSize: '0.9rem', gridColumn: '1 / -1' }}>No items listed yet.</p>
+              ) : (
+                myListings.map(item => (
+                  <div key={item.id} className={`store-item ${item.isDigital ? 'app-item' : ''}`}>
+                    {item.isDigital ? (
+                      <div className="app-icon" aria-hidden>{item.title.substring(0, 3).toUpperCase()}</div>
+                    ) : (
+                      <img src={item.cover_image_url || 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=400'} alt={item.title} />
+                    )}
+                    <div className="store-item-info">
+                      <h4>{item.title}</h4>
+                      {item.isDigital && item.description && <p className="app-desc">{item.description}</p>}
+                      <span className="price">{item.price_display}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

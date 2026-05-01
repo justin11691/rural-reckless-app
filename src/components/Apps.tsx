@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, Cpu, BookOpen, PenLine, Plus, X, CreditCard, Bitcoin, ChevronDown, ChevronUp, ExternalLink, ShoppingCart } from 'lucide-react';
+import { Search, Cpu, BookOpen, PenLine, Plus, X, CreditCard, Bitcoin, ChevronDown, ChevronUp, ExternalLink, ShoppingCart, MessageSquare } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Link } from 'react-router-dom';
 
 const PRODUCT_CATEGORIES = ['E-Book', 'Short Story / Poetry', 'Config File', 'Design Files', 'Software', 'Music', 'Art / Printables', 'Other'];
 
@@ -109,6 +110,11 @@ function ProductCard({ product }: { product: any }) {
             <span style={{ flex: 1, textAlign: 'center', background: '#635BFF', color: 'white', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', opacity: 0.6, cursor: 'not-allowed' }}>
               <CreditCard size={14} aria-hidden /> Buy — Card
             </span>
+          )}
+          {product.owner_id !== 'sample' && !product.payment_url && !product.crypto_url && (
+            <Link to="/messages" state={{ receiverId: product.owner_id, listingId: product.id }} style={{ flex: 1, textAlign: 'center', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: '1px solid var(--color-border)', minHeight: '44px' }} aria-label={`Message seller about ${product.title}`}>
+              <MessageSquare size={14} aria-hidden /> Message
+            </Link>
           )}
         </div>
       </div>

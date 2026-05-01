@@ -9,6 +9,7 @@ import { Auth } from './components/Auth';
 import { Marketplace } from './components/Marketplace';
 import { Apps } from './components/Apps';
 import { Communities } from './components/Communities';
+import { Messages } from './components/Messages';
 import { supabase } from './lib/supabase';
 
 function App() {
@@ -90,7 +91,7 @@ function App() {
         </div>
 
         <div className="nav-actions">
-          <button className="icon-button" aria-label="Messages"><MessageSquare size={20} /></button>
+          <button className="icon-button" onClick={() => navTo('messages')} aria-label="Messages"><MessageSquare size={20} /></button>
           <button className="icon-button" aria-label="Notifications"><Bell size={20} /></button>
           <img
             src={userAvatar}
@@ -175,6 +176,10 @@ function App() {
 
           <Route path="/apps" element={
             <PageWrapper><Apps /></PageWrapper>
+          } />
+
+          <Route path="/messages" element={
+            <PageWrapper><Messages /></PageWrapper>
           } />
 
           <Route path="*" element={<Navigate to="/" replace />} />

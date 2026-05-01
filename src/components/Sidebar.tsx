@@ -1,4 +1,4 @@
-import { Home, Users, ShoppingBag } from 'lucide-react';
+import { Home, Users, ShoppingBag, MessageSquare } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -15,6 +15,9 @@ export function Sidebar({ activeTab, setActiveTab, avatar }: SidebarProps) {
       <a href="#" className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }}>
         <img src={avatar} alt="Profile" className="avatar-small" style={{width: 20, height: 20}} /> 
         My Profile
+      </a>
+      <a href="#" className={`nav-item ${activeTab === 'messages' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('messages'); }}>
+        <MessageSquare size={20} /> Messages
       </a>
       
       <div className="sidebar-divider"></div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Search, MapPin, Plus, X, ExternalLink, CreditCard, Bitcoin, Leaf, Tag, Package } from 'lucide-react';
+import { ShoppingBag, Search, MapPin, Plus, X, CreditCard, Bitcoin, Leaf, Tag, Package, MessageSquare, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Link } from 'react-router-dom';
 
 const FARM_CATEGORIES = ['Woodworking','Pottery & Ceramics','Textiles & Quilts','Candles & Soaps','Jewelry','Painting & Prints','Farm & Garden','Baked Goods','3D Prints','Leather Goods','Metalwork','Other Handmade'];
 const RUMMAGE_CATEGORIES = ['Furniture','Tools','Clothing','Electronics','Books & Media','Toys & Games','Kitchen','Outdoor & Garden','Farm Equipment','Sporting Goods','Baby & Kids','Other'];
@@ -136,7 +137,15 @@ function ListingCard({ listing }: { listing:any }) {
             {listing.payment_url && <a href={listing.payment_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#635BFF', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><CreditCard size={12}/> Card</a>}
             {listing.crypto_url && <a href={listing.crypto_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#F7931A', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><Bitcoin size={12}/> Crypto</a>}
             {listing.etsy_url && <a href={listing.etsy_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#F56400', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><ExternalLink size={12}/> Etsy</a>}
-            {!listing.payment_url && !listing.crypto_url && !listing.etsy_url && <span style={{ flex:1, textAlign:'center', color:'var(--color-text-muted)', fontSize:'0.8rem', padding:'0.4rem' }}>Message seller</span>}
+            {!listing.payment_url && !listing.crypto_url && !listing.etsy_url ? (
+              <Link to="/messages" state={{ receiverId: listing.user_id, listingId: listing.id }} style={{ flex:1, textAlign:'center', background:'var(--color-bg-base)', color:'var(--color-text-main)', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem', border:'1px solid var(--color-border)' }}>
+                <MessageSquare size={12}/> Message seller
+              </Link>
+            ) : (
+              <Link to="/messages" state={{ receiverId: listing.user_id, listingId: listing.id }} title="Ask a question" style={{ display:'flex', alignItems:'center', justifyContent:'center', background:'var(--color-bg-base)', color:'var(--color-text-main)', padding:'0.4rem', borderRadius:'var(--radius-md)', textDecoration:'none', border:'1px solid var(--color-border)' }}>
+                <MessageSquare size={14}/>
+              </Link>
+            )}
           </>)}
         </div>
       </div>
