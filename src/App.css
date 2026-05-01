@@ -1,20 +1,22 @@
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 2rem;
+  padding: 0.75rem 1.5rem;
   background-color: var(--color-pine-dark);
   color: #fff;
   position: sticky;
   top: 0;
-  z-index: 50;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 200;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  gap: 1rem;
 }
 
 .nav-brand {
@@ -94,7 +96,33 @@
   margin: 0 auto;
   width: 100%;
   padding: 2rem;
-  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Desktop sidebar wrapper — always visible on desktop */
+.desktop-sidebar {
+  display: block;
+  width: 280px;
+  padding: 2rem;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg-base);
+  min-height: 100%;
+  flex-shrink: 0;
+}
+
+/* Mobile hamburger — hidden on desktop */
+.mobile-menu-toggle {
+  display: none;
+}
+
+/* Mobile nav overlay */
+.mobile-nav-overlay {
+  display: none;
+}
+
+/* Mobile nav drawer */
+.mobile-nav-drawer {
+  display: none;
 }
 
 /* Sidebar */
@@ -295,10 +323,12 @@
   color: var(--color-text-muted);
 }
 
-/* Responsive */
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .main-layout {
     grid-template-columns: 240px 1fr;
+    padding: 1.25rem;
+    gap: 1.25rem;
   }
   .right-sidebar {
     display: none;
@@ -306,13 +336,124 @@
 }
 
 @media (max-width: 768px) {
+  /* Layout */
   .main-layout {
     grid-template-columns: 1fr;
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .desktop-sidebar { display: none; }
+  .mobile-menu-toggle { display: flex; }
+  .nav-search { display: none; }
+
+  /* Navbar — prevent overflow on small screens */
+  .navbar {
+    padding: 0.6rem 0.85rem;
+    gap: 0.5rem;
+  }
+  .nav-brand {
+    font-size: 1rem;
+    gap: 0.4rem;
+  }
+  .nav-actions {
+    gap: 0.4rem;
+  }
+
+  /* Mobile overlay */
+  .mobile-nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 150;
+  }
+
+  /* Mobile nav drawer */
+  .mobile-nav-drawer {
+    display: block;
+    position: fixed;
+    top: 52px;
+    left: -300px;
+    width: 260px;
+    height: calc(100vh - 52px);
+    background: var(--color-bg-base);
+    border-right: 1px solid var(--color-border);
+    z-index: 160;
+    padding: 1.25rem;
+    transition: left 0.25s ease;
+    overflow-y: auto;
+  }
+  .mobile-nav-drawer.open { left: 0; }
+
+  /* Cards — full width, smaller padding */
+  .card {
     padding: 1rem;
+    border-radius: var(--radius-md);
   }
-  .sidebar {
-    display: none;
+
+  /* Feed */
+  .feed-container {
+    gap: 1rem;
+    max-width: 100%;
   }
+  .create-post { flex-direction: column; }
+  .post-input { font-size: 0.95rem; padding: 0.75rem; }
+  .post-footer { gap: 0; }
+
+  /* Profile */
+  .profile-content-grid { grid-template-columns: 1fr; }
+  .profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 0;
+    padding: 0 1rem;
+    gap: 0.75rem;
+  }
+  .profile-banner { height: 140px; }
+  .profile-avatar-large {
+    width: 80px;
+    height: 80px;
+    margin-top: -40px;
+  }
+  .profile-name-row h1 { font-size: 1.5rem; }
+  .profile-content-grid { padding: 0 1rem 2rem; }
+
+  /* Marketplace / page sections */
+  div[style*="padding: '2rem'"],
+  div[style*='padding: 2rem'] {
+    padding: 1rem !important;
+  }
+
+  /* Finger-friendly touch targets */
+  button { min-height: 44px; }
+  .interaction-btn { min-height: 44px; }
+  .nav-item { padding: 0.85rem 1rem; }
+  a[style*='border-radius'] { min-height: 44px; }
+
+  /* Storefront grid on mobile */
+  .storefront-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+
+  /* Theme editor — keep on screen */
+  .theme-editor-toggle { bottom: 1.25rem; right: 1.25rem; }
+  .theme-editor-panel { right: 1.25rem; bottom: 4.5rem; width: 220px; }
+}
+
+/* Extra small — 375px iPhone SE etc */
+@media (max-width: 420px) {
+  .nav-brand span { display: none; }
+  .main-layout { padding: 0.5rem; }
+  .card { padding: 0.85rem; }
+  .profile-banner { height: 110px; }
+  .profile-avatar-large { width: 68px; height: 68px; margin-top: -34px; }
+  .profile-name-row h1 { font-size: 1.25rem; }
+
+  /* Marketplace grids single column */
+  div[style*='minmax(230px'] { grid-template-columns: 1fr !important; }
+  div[style*='minmax(240px'] { grid-template-columns: 1fr !important; }
 }
 
 /* MySpace Style Profile */

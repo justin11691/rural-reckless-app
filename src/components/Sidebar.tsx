@@ -1,4 +1,4 @@
-import { Home, Users, ShoppingBag, BookOpen } from 'lucide-react';
+import { Home, Users, ShoppingBag } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -9,10 +9,10 @@ interface SidebarProps {
 export function Sidebar({ activeTab, setActiveTab, avatar }: SidebarProps) {
   return (
     <aside className="sidebar">
-      <a href="#" className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
+      <a href="#" className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('home'); }}>
         <Home size={20} /> The Feed
       </a>
-      <a href="#" className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
+      <a href="#" className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }}>
         <img src={avatar} alt="Profile" className="avatar-small" style={{width: 20, height: 20}} /> 
         My Profile
       </a>
@@ -20,15 +20,19 @@ export function Sidebar({ activeTab, setActiveTab, avatar }: SidebarProps) {
       <div className="sidebar-divider"></div>
       
       <h3 className="sidebar-heading">Communities</h3>
-      <a href="#" className="nav-item"><Users size={20} /> Woodworkers Guild</a>
-      <a href="#" className="nav-item"><Users size={20} /> 3D Printing Hub</a>
-      <a href="#" className="nav-item"><BookOpen size={20} /> Indie Authors</a>
+      <a href="#" className={`nav-item ${activeTab === 'communities' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('communities'); }}>
+        <Users size={20} /> Communities Hub
+      </a>
       
       <div className="sidebar-divider"></div>
 
       <h3 className="sidebar-heading">Marketplace</h3>
-      <a href="#" className="nav-item"><ShoppingBag size={20} /> Farmers Market</a>
-      <a href="#" className="nav-item"><ShoppingBag size={20} /> Digital Goods & Apps</a>
+      <a href="#" className={`nav-item ${activeTab === 'market' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('market'); }}>
+        <ShoppingBag size={20} /> Farmers Market
+      </a>
+      <a href="#" className={`nav-item ${activeTab === 'apps' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('apps'); }}>
+        <ShoppingBag size={20} /> Digital Goods & Apps
+      </a>
     </aside>
   );
 }
