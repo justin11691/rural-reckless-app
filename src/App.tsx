@@ -12,6 +12,8 @@ import { Communities } from './components/Communities';
 import { GroupPage } from './components/GroupPage';
 import { Messages } from './components/Messages';
 import { DiscoverUsers } from './components/DiscoverUsers';
+import { CartModal } from './components/CartModal';
+import { useCart } from './lib/cart';
 import { supabase } from './lib/supabase';
 
 function App() {
@@ -20,6 +22,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const { items } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -94,6 +98,14 @@ function App() {
         </div>
 
         <div className="nav-actions" style={{ position: 'relative' }}>
+          <button className="icon-button" onClick={() => setShowCart(!showCart)} aria-label="Cart" style={{ position: 'relative' }}>
+            <ShoppingBag size={20} />
+            {items.length > 0 && (
+              <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--color-accent)', color: 'white', fontSize: '0.68rem', borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                {items.length}
+              </span>
+            )}
+          </button>
           <button className="icon-button" onClick={() => navTo('messages')} aria-label="Messages"><MessageSquare size={20} /></button>
           <button className="icon-button" onClick={() => setNotificationsOpen(!notificationsOpen)} aria-label="Notifications"><Bell size={20} /></button>
           {notificationsOpen && (
@@ -220,6 +232,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      {showCart && <CartModal onClose={() => setShowCart(false)} />}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Cpu, BookOpen, PenLine, Plus, X, CreditCard, Bitcoin, ChevronDown, ChevronUp, ExternalLink, ShoppingCart, MessageSquare, Book, Box } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
+import { addToCart } from '../lib/cart';
 import { BookStudio } from './BookStudio';
 import { BookReader } from './BookReader';
 import { PrintStudio } from './PrintStudio';
@@ -107,6 +108,23 @@ function ProductCard({ product, onReadClick, onViewPrintClick }: { product: any;
             </button>
           ) : (
             <>
+              {!isFree && (
+                <button
+                  onClick={() => {
+                    addToCart({
+                      id: product.id,
+                      title: product.title,
+                      price_display: product.price_display,
+                      price: parseFloat(product.price_display?.replace(/[^0-9.]/g, '') || '0'),
+                      cover_image_url: product.cover_image_url,
+                    });
+                    alert(`Successfully added ${product.title} to your cart!`);
+                  }}
+                  style={{ flex: 1, minWidth: '120px', textAlign: 'center', background: 'var(--color-pine-primary)', color: 'white', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.875rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', minHeight: '44px' }}
+                >
+                  <ShoppingCart size={14} /> Add to Cart
+                </button>
+              )}
               {isFree && product.file_url && (
                 <a href={product.file_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: 'var(--color-pine-primary)', color: 'white', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', minHeight: '44px' }} aria-label={`Download ${product.title} for free`}>
                   <ExternalLink size={14} aria-hidden /> Free Download

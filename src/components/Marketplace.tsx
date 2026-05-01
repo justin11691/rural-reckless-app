@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShoppingBag, Search, MapPin, Plus, X, CreditCard, Bitcoin, Leaf, Tag, Package, MessageSquare, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
+import { addToCart } from '../lib/cart';
 
 const FARM_CATEGORIES = ['Woodworking','Pottery & Ceramics','Textiles & Quilts','Candles & Soaps','Jewelry','Painting & Prints','Farm & Garden','Baked Goods','3D Prints','Leather Goods','Metalwork','Other Handmade'];
 const RUMMAGE_CATEGORIES = ['Furniture','Tools','Clothing','Electronics','Books & Media','Toys & Games','Kitchen','Outdoor & Garden','Farm Equipment','Sporting Goods','Baby & Kids','Other'];
@@ -266,6 +267,22 @@ export function Marketplace() {
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Posted by {selectedListing.seller_name || 'Anonymous'}</p>
             {selectedListing.description && <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--color-text-main)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{selectedListing.description}</p>}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              <button
+                onClick={() => {
+                  addToCart({
+                    id: selectedListing.id,
+                    title: selectedListing.title,
+                    price_display: selectedListing.price_display,
+                    price: parseFloat(selectedListing.price_display?.replace(/[^0-9.]/g, '') || '0'),
+                    cover_image_url: selectedListing.cover_image_url,
+                  });
+                  alert(`Successfully added ${selectedListing.title} to your cart!`);
+                  setSelectedListing(null);
+                }}
+                style={{ flex: 1, minWidth: '160px', textAlign: 'center', background: 'var(--color-pine-primary)', color: 'white', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+              >
+                <ShoppingBag size={15}/> Add to Cart
+              </button>
               {selectedListing.payment_url && <a href={selectedListing.payment_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#635BFF', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><CreditCard size={14}/> Buy with Card</a>}
               {selectedListing.crypto_url && <a href={selectedListing.crypto_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#F7931A', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><Bitcoin size={14}/> Buy with Crypto</a>}
               {selectedListing.etsy_url && <a href={selectedListing.etsy_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#F56400', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><ExternalLink size={14}/> Etsy Shop</a>}
