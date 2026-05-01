@@ -11,6 +11,7 @@ import { Apps } from './components/Apps';
 import { Communities } from './components/Communities';
 import { GroupPage } from './components/GroupPage';
 import { Messages } from './components/Messages';
+import { DiscoverUsers } from './components/DiscoverUsers';
 import { supabase } from './lib/supabase';
 
 function App() {
@@ -202,6 +203,10 @@ function App() {
 
           <Route path="/market" element={
             <PageWrapper><Marketplace /></PageWrapper>
+          } />
+
+          <Route path="/users" element={
+            <PageWrapper><DiscoverUsers /></PageWrapper>
           } />
 
           <Route path="/apps" element={

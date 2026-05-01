@@ -16,6 +16,9 @@ export function Sidebar({ activeTab, setActiveTab, avatar }: SidebarProps) {
         <img src={avatar} alt="Profile" className="avatar-small" style={{width: 20, height: 20}} /> 
         My Profile
       </a>
+      <a href="#" className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('users'); }}>
+        <Users size={20} /> Discover Users
+      </a>
       <a href="#" className={`nav-item ${activeTab === 'messages' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('messages'); }}>
         <MessageSquare size={20} /> Messages
       </a>
