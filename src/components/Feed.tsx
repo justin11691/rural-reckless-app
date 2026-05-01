@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ImageIcon, ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu, Trash2, Send } from 'lucide-react';
+import { ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu, Trash2, Send, Package, Box } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 function timeAgo(dateStr: string) {
@@ -13,18 +13,20 @@ function timeAgo(dateStr: string) {
 const CAT_ICONS: Record<string, React.ReactNode> = {
   'E-Book': <BookOpen size={16} />, 'Short Story / Poetry': <BookOpen size={16} />,
   'Config File': <Cpu size={16} />, 'Design Files': <Cpu size={16} />,
-  'Software': <Cpu size={16} />, 'default': <ShoppingCart size={16} />,
+  'Software': <Cpu size={16} />, '3D Prints': <Box size={16} />, 'default': <ShoppingCart size={16} />,
 };
 
 // ─── Social Tab ───────────────────────────────────────────────────────────────
 function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; currentUserProfile: any }) {
   const [posts, setPosts] = useState<any[]>([]);
   const [content, setContent] = useState('');
+  const [postCategory, setPostCategory] = useState<'General' | 'Life Event' | 'Recipe' | 'Day to Day'>('General');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [posting, setPosting] = useState(false);
   const [activeCommentPost, setActiveCommentPost] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
+  const [filterSocialCat, setFilterSocialCat] = useState<'All' | 'Life Event' | 'Recipe' | 'Day to Day'>('All');
 
   useEffect(() => { fetchPosts(); }, []);
 
@@ -36,7 +38,6 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       .order('created_at', { ascending: false });
     if (e) { setError('Could not load posts. Try refreshing.'); setLoading(false); return; }
 
-    // Fetch profile info separately for each unique user
     const userIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
     let profileMap: Record<string, any> = {};
     if (userIds.length > 0) {
@@ -47,7 +48,6 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
     }
 
-    // Fetch likes and comments count
     const postIds = (postsData || []).map((p: any) => p.id);
     let likesMap: Record<string, { count: number, me: boolean }> = {};
     let commentsMap: Record<string, any[]> = {};
@@ -58,14 +58,12 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
         .select('post_id, user_id')
         .in('post_id', postIds);
 
-      // Fetch comments WITHOUT embedded join (avoids 400 if FK not registered)
       const { data: comments } = await supabase
         .from('post_comments')
         .select('id, post_id, user_id, content, created_at')
         .in('post_id', postIds)
         .order('created_at', { ascending: true });
 
-      // Fetch comment authors separately
       const commentUserIds = [...new Set((comments||[]).map((c:any)=>c.user_id))];
       let commentProfileMap: Record<string,any> = {};
       if (commentUserIds.length > 0) {
@@ -101,7 +99,9 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   async function submit() {
     if (!content.trim() || !currentUser) return;
     setPosting(true);
-    const { error: e } = await supabase.from('posts').insert([{ user_id: currentUser.id, content }]);
+    // Leverage content/metadata to store category or add custom flags
+    const bodyContent = postCategory !== 'General' ? `[#${postCategory}] ${content}` : content;
+    const { error: e } = await supabase.from('posts').insert([{ user_id: currentUser.id, content: bodyContent }]);
     if (!e) { setContent(''); fetchPosts(); }
     else setError('Could not post. Try again.');
     setPosting(false);
@@ -109,8 +109,6 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
 
   async function toggleLike(postId: string, currentlyLiked: boolean) {
     if (!currentUser) return;
-    
-    // Optimistic UI
     setPosts(posts.map(p => {
       if (p.id === postId) {
         return { ...p, liked_by_me: !currentlyLiked, like_count: p.like_count + (currentlyLiked ? -1 : 1) };
@@ -127,7 +125,6 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
 
   async function submitComment(postId: string) {
     if (!commentText.trim() || !currentUser) return;
-    
     const { data, error } = await supabase.from('post_comments').insert([{ 
       post_id: postId, 
       user_id: currentUser.id, 
@@ -151,21 +148,41 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     await supabase.from('posts').delete().eq('id', postId);
   }
 
+  const filteredPosts = posts.filter(p => {
+    if (filterSocialCat === 'All') return true;
+    return p.content?.includes(`[#${filterSocialCat}]`);
+  });
+
   return (
     <div className="feed-container">
+      {/* Category selector for social feed filter */}
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        {(['All', 'Life Event', 'Recipe', 'Day to Day'] as const).map(c => (
+          <button key={c} onClick={() => setFilterSocialCat(c)} style={{ padding: '0.45rem 1rem', background: filterSocialCat === c ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: filterSocialCat === c ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+            {c}
+          </button>
+        ))}
+      </div>
+
       {/* Compose */}
       <div className="card create-post">
         <img src={currentUserProfile?.avatar_url || '/images/avatar_maker.png'} alt="You" className="avatar-small" style={{ width: 40, height: 40, flexShrink: 0 }} />
         <div className="post-input-wrapper">
-          <textarea className="post-input" rows={3} placeholder="Share what you're building."
+          <textarea className="post-input" rows={3} placeholder="Share a life event, a new recipe, or your day-to-day moments..."
             value={content} onChange={e => setContent(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) submit(); }}
             aria-label="Write a post" />
-          <div className="post-actions">
-            <button className="action-btn" disabled title="Photo upload coming soon" aria-label="Photo">
-              <ImageIcon size={18} /> Photo
-            </button>
-            <button onClick={submit} disabled={!content.trim() || posting}>
+          <div className="post-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Type:</span>
+              <select value={postCategory} onChange={e => setPostCategory(e.target.value as any)} style={{ padding: '0.35rem 0.65rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'white', fontSize: '0.82rem' }}>
+                <option value="General">General Post</option>
+                <option value="Life Event">Life Event</option>
+                <option value="Recipe">Recipe</option>
+                <option value="Day to Day">Day to Day</option>
+              </select>
+            </div>
+            <button onClick={submit} disabled={!content.trim() || posting} style={{ padding: '0.55rem 1.25rem', background: 'var(--color-pine-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 600, cursor: 'pointer' }}>
               {posting ? 'Posting…' : 'Post'}
             </button>
           </div>
@@ -179,13 +196,13 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
           <Leaf size={32} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.4 }} />
           Loading the feed…
         </div>
-      ) : posts.length === 0 ? (
+      ) : filteredPosts.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
           <Leaf size={40} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.35 }} />
-          <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-pine-dark)' }}>Nothing posted yet.</p>
-          <p>Be reckless. Start the first thing.</p>
+          <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-pine-dark)' }}>No posts under this category yet.</p>
+          <p>Be the first to share your recipes and life updates.</p>
         </div>
-      ) : posts.map(post => (
+      ) : filteredPosts.map(post => (
         <article key={post.id} className="card post-card">
           <div className="post-header">
             <div className="post-author">
@@ -254,14 +271,14 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   );
 }
 
-// ─── For You Tab ──────────────────────────────────────────────────────────────
+// ─── For You Tab (Blending Online & Local Goods) ──────────────────────────────
 function ForYouFeed({ currentUser }: { currentUser: any }) {
-  const [products, setProducts] = useState<any[]>([]);
+  const [blendedProducts, setBlendedProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchRecommended(); }, []);
+  useEffect(() => { fetchBlendedRecommended(); }, []);
 
-  async function fetchRecommended() {
+  async function fetchBlendedRecommended() {
     setLoading(true);
 
     // Step 1: find categories the user cares about (via their group memberships)
@@ -273,76 +290,116 @@ function ForYouFeed({ currentUser }: { currentUser: any }) {
         .eq('user_id', currentUser.id)
         .eq('status', 'active');
       if (memberships) {
-        interests = [...new Set(memberships.map((m: any) => m.groups?.category).filter(Boolean))];
+        interests = [...new Set(memberships.map((m: any) => m.communities?.category).filter(Boolean))];
       }
     }
 
-    // Step 2: fetch products matching interests, fallback to latest if none
-    let query = supabase.from('digital_products').select('*').eq('is_active', true);
-    if (interests.length > 0) {
-      // Map group categories to product categories (loose match)
-      const mapped = interests.flatMap(i => {
-        const lower = i.toLowerCase();
-        if (lower.includes('writing') || lower.includes('reading')) return ['E-Book', 'Short Story / Poetry'];
-        if (lower.includes('wood') || lower.includes('craft')) return ['Design Files', 'Config File'];
-        if (lower.includes('3d') || lower.includes('print')) return ['Config File', 'Design Files', 'Software'];
-        if (lower.includes('music')) return ['Music'];
-        return ['Other'];
-      });
-      query = query.in('category', [...new Set(mapped)]);
+    let userState = '';
+    if (currentUser) {
+      const { data: profile } = await supabase.from('profiles').select('location_state').eq('id', currentUser.id).single();
+      if (profile?.location_state) userState = profile.location_state.toUpperCase();
     }
-    const { data } = await query.order('created_at', { ascending: false }).limit(20);
-    setProducts(data || []);
+
+    // Step 2: fetch digital products matching interests, fallback to latest if none
+    let digiQuery = supabase.from('digital_products').select('*');
+    const { data: digitalItems } = await digiQuery.order('created_at', { ascending: false }).limit(20);
+
+    // Step 3: fetch local handmade / rummage market listings
+    let localQuery = supabase.from('market_listings').select('*').eq('is_active', true);
+    const { data: localItems } = await localQuery.order('created_at', { ascending: false }).limit(20);
+
+    // Step 4: Blend and filter with interest & location algorithm
+    const blended = [...(digitalItems || []).map(i => ({ ...i, type: 'digital' })), ...(localItems || []).map(i => ({ ...i, type: 'local' }))];
+
+    blended.sort((a, b) => {
+      // 1. Proximity: Prioritize local items in the same state first
+      const aInState = a.type === 'local' && a.location_state?.toUpperCase() === userState;
+      const bInState = b.type === 'local' && b.location_state?.toUpperCase() === userState;
+      if (aInState && !bInState) return -1;
+      if (!aInState && bInState) return 1;
+
+      // 2. Interests: Check category matching
+      if (interests.length > 0) {
+        const aInterest = interests.some(i => a.category?.toLowerCase().includes(i.toLowerCase()));
+        const bInterest = interests.some(i => b.category?.toLowerCase().includes(i.toLowerCase()));
+        if (aInterest && !bInterest) return -1;
+        if (!aInterest && bInterest) return 1;
+      }
+
+      // 3. Recency: Fallback chronologically
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    setBlendedProducts(blended.slice(0, 24));
     setLoading(false);
   }
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
-      <Leaf size={32} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.4 }} /> Loading recommendations…
+      <Leaf size={32} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.4 }} /> Loading your personal algorithm…
     </div>
   );
 
-  if (products.length === 0) return (
+  if (blendedProducts.length === 0) return (
     <div className="feed-container">
       <div className="card" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
         <ShoppingCart size={40} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.35 }} />
-        <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-pine-dark)' }}>No recommendations yet.</p>
-        <p>Join some communities to tune your feed, or check out the Digital Goods section directly.</p>
+        <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-pine-dark)' }}>No items to recommend yet.</p>
+        <p>Join communities to refine what you are interested in.</p>
       </div>
     </div>
   );
 
   return (
     <div className="feed-container">
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-        📡 Recommended based on your community interests
+      <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+        📡 Blended recommendations based on your local, shippable, and online interests
       </p>
-      {products.map(p => {
-        const isFree = p.price_display?.toLowerCase() === 'free';
-        return (
-          <div key={p.id} className="card" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-            {p.cover_image_url
-              ? <img src={p.cover_image_url} alt={p.title} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--radius-md)', flexShrink: 0 }} loading="lazy" />
-              : <div style={{ width: 72, height: 72, background: 'linear-gradient(135deg, var(--color-pine-dark), var(--color-pine-light))', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>
-                  {CAT_ICONS[p.category] ?? CAT_ICONS['default']}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {blendedProducts.map(p => {
+          const isFree = p.price_display?.toLowerCase() === 'free';
+          const isLocal = p.type === 'local';
+          return (
+            <div key={p.id} className="card" style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', padding: '1.25rem', borderRadius: 'var(--radius-lg)' }}>
+              {p.cover_image_url
+                ? <img src={p.cover_image_url} alt={p.title} style={{ width: 85, height: 85, objectFit: 'cover', borderRadius: 'var(--radius-md)', flexShrink: 0 }} loading="lazy" />
+                : <div style={{ width: 85, height: 85, background: 'linear-gradient(135deg, var(--color-pine-dark), var(--color-pine-light))', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>
+                    {CAT_ICONS[p.category] ?? CAT_ICONS['default']}
+                  </div>
+              }
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <h4 style={{ margin: 0, color: 'var(--color-pine-dark)', fontSize: '1.05rem', fontWeight: 700 }}>{p.title}</h4>
+                  <span style={{ fontWeight: 700, color: isFree ? 'var(--color-pine-primary)' : 'var(--color-accent)', flexShrink: 0 }}>{p.price_display}</span>
                 </div>
-            }
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <h4 style={{ margin: 0, color: 'var(--color-pine-dark)', fontSize: '1rem' }}>{p.title}</h4>
-                <span style={{ fontWeight: 700, color: isFree ? 'var(--color-pine-primary)' : 'var(--color-accent)', flexShrink: 0 }}>{p.price_display}</span>
-              </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{p.category}</span>
-              {p.description && <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>{p.description}</p>}
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                {isFree && p.file_url && <a href={p.file_url} target="_blank" rel="noopener noreferrer" style={{ background: 'var(--color-pine-primary)', color: 'white', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, minHeight: 36, display: 'flex', alignItems: 'center' }}>Free Download</a>}
-                {!isFree && p.payment_url && <a href={p.payment_url} target="_blank" rel="noopener noreferrer" style={{ background: '#635BFF', color: 'white', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, minHeight: 36, display: 'flex', alignItems: 'center' }}>💳 Buy</a>}
-                {!isFree && p.crypto_url && <a href={p.crypto_url} target="_blank" rel="noopener noreferrer" style={{ background: '#F7931A', color: 'white', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600, minHeight: 36, display: 'flex', alignItems: 'center' }}>₿ Crypto</a>}
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    {isLocal ? <Package size={13} /> : <Box size={13} />} {isLocal ? 'Local Pickup / Delivery' : 'Online Digital Good'}
+                  </span>
+                  <span style={{ color: 'var(--color-border)' }}>•</span>
+                  <span style={{ fontSize: '0.75rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', padding: '0.15rem 0.5rem', borderRadius: '4px', color: 'var(--color-text-muted)' }}>{p.category}</span>
+                </div>
+                {p.description && <p style={{ margin: '0.45rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>{p.description}</p>}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                  {isLocal ? (
+                    p.payment_url ? (
+                      <a href={p.payment_url} target="_blank" rel="noopener noreferrer" style={{ background: '#635BFF', color: 'white', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>💳 Buy Local</a>
+                    ) : (
+                      <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-md)' }}>Message Seller to claim</span>
+                    )
+                  ) : (
+                    <>
+                      {isFree && p.file_url && <a href={p.file_url} target="_blank" rel="noopener noreferrer" style={{ background: 'var(--color-pine-primary)', color: 'white', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>Free Download</a>}
+                      {!isFree && p.payment_url && <a href={p.payment_url} target="_blank" rel="noopener noreferrer" style={{ background: '#635BFF', color: 'white', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>💳 Buy Online</a>}
+                      {!isFree && p.crypto_url && <a href={p.crypto_url} target="_blank" rel="noopener noreferrer" style={{ background: '#F7931A', color: 'white', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>₿ Crypto</a>}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

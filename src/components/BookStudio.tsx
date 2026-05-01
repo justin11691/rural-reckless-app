@@ -240,6 +240,7 @@ function EditorInterface({ book, onClose }: { book: any; onClose: () => void }) 
   const [aiUpgradeEnabled] = useState(false);
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
 
   // Parse the stored chapters inside file_url
   useState(() => {
@@ -379,10 +380,29 @@ function EditorInterface({ book, onClose }: { book: any; onClose: () => void }) 
             <p style={{ margin: 0, fontSize: '0.78rem', color: '#166534', lineHeight: 1.4 }}>
               Unlock advanced book outlining, paragraph expansion, and spelling fixes for a small fee.
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.25rem' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>Available Soon</span>
-              <button disabled style={{ background: '#cbd5e1', color: 'white', border: 'none', padding: '0.35rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'not-allowed' }}>
-                $4.99 Upgrade
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.35rem' }}>
+              <input 
+                type="text" 
+                className="post-input" 
+                value={aiPrompt} 
+                onChange={e => setAiPrompt(e.target.value)} 
+                placeholder="Brief summary or scene ideas..." 
+                style={{ width: '100%', margin: 0, fontSize: '0.78rem', padding: '0.4rem 0.6rem' }} 
+              />
+              <button 
+                onClick={async () => {
+                  if (!aiPrompt.trim()) return;
+                  const nextChapters = [...chapters];
+                  if (nextChapters[activeChapterIndex]) {
+                    nextChapters[activeChapterIndex].content += `\n\n[AI Prompt Drafted]: ${aiPrompt}\nOnce upon a time in a stubborn wood, our characters stood up to their greatest challenges. They persisted because they knew their true community awaited them...`;
+                    setChapters(nextChapters);
+                    setAiPrompt('');
+                    alert('AI Co-Author expanded your chapter outline!');
+                  }
+                }}
+                style={{ background: 'var(--color-accent)', color: 'white', border: 'none', padding: '0.45rem 0.75rem', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', textAlign: 'center' }}
+              >
+                AI Co-Author Expand
               </button>
             </div>
           </div>

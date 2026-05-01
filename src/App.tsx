@@ -18,6 +18,7 @@ function App() {
   const [userAvatar, setUserAvatar] = useState('/images/avatar_maker.png');
   const [activeTab, setActiveTab] = useState('home');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -91,9 +92,29 @@ function App() {
           <input type="text" placeholder="Search Rural &amp; Reckless..." aria-label="Search" />
         </div>
 
-        <div className="nav-actions">
+        <div className="nav-actions" style={{ position: 'relative' }}>
           <button className="icon-button" onClick={() => navTo('messages')} aria-label="Messages"><MessageSquare size={20} /></button>
-          <button className="icon-button" aria-label="Notifications"><Bell size={20} /></button>
+          <button className="icon-button" onClick={() => setNotificationsOpen(!notificationsOpen)} aria-label="Notifications"><Bell size={20} /></button>
+          {notificationsOpen && (
+            <div className="card" style={{ position: 'absolute', top: '50px', right: '40px', width: '280px', zIndex: 1000, padding: '1rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)' }}>
+              <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-pine-dark)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                System & Maker Notifications
+                <button onClick={() => setNotificationsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}><X size={14} /></button>
+              </h4>
+              <hr style={{ margin: '0.5rem 0', borderColor: 'var(--color-border)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div style={{ fontSize: '0.82rem', padding: '0.35rem 0' }}>
+                  <strong>🌿 New Storefront Item:</strong> Arthur listed a new handmade bowl for sale.
+                </div>
+                <div style={{ fontSize: '0.82rem', padding: '0.35rem 0' }}>
+                  <strong>📬 Friend Connected:</strong> Your friend request was approved.
+                </div>
+                <div style={{ fontSize: '0.82rem', padding: '0.35rem 0' }}>
+                  <strong>🛒 Direct Sale Complete:</strong> Maker confirmed your transaction.
+                </div>
+              </div>
+            </div>
+          )}
           <img
             src={userAvatar}
             alt="Your profile"
@@ -164,6 +185,10 @@ function App() {
           } />
 
           <Route path="/profile" element={
+            <PageWrapper><Profile /></PageWrapper>
+          } />
+
+          <Route path="/profile/:id" element={
             <PageWrapper><Profile /></PageWrapper>
           } />
 

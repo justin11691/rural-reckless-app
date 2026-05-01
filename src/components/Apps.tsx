@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Search, Cpu, BookOpen, PenLine, Plus, X, CreditCard, Bitcoin, ChevronDown, ChevronUp, ExternalLink, ShoppingCart, MessageSquare, Book } from 'lucide-react';
+import { Search, Cpu, BookOpen, PenLine, Plus, X, CreditCard, Bitcoin, ChevronDown, ChevronUp, ExternalLink, ShoppingCart, MessageSquare, Book, Box } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { BookStudio } from './BookStudio';
 import { BookReader } from './BookReader';
+import { PrintStudio } from './PrintStudio';
+import { PrintViewer } from './PrintViewer';
 
 const PRODUCT_CATEGORIES = ['E-Book', 'Short Story / Poetry', 'Config File', 'Design Files', 'Software', 'Music', 'Art / Printables', 'Other'];
 
@@ -65,9 +67,10 @@ function HowToGetPaid() {
   );
 }
 
-function ProductCard({ product, onReadClick }: { product: any; onReadClick: (p: any) => void }) {
+function ProductCard({ product, onReadClick, onViewPrintClick }: { product: any; onReadClick: (p: any) => void; onViewPrintClick: (p: any) => void }) {
   const isFree = product.price_display?.toLowerCase() === 'free';
-  const isDirectBook = product.file_url?.startsWith('BOOK_JSON:');
+  const isDirectBook = product.file_url?.startsWith('BOOK_JSON:') || product.category === 'E-Book';
+  const isDirectPrint = product.file_url?.startsWith('PRINT_JSON:') || product.category === 'Design Files';
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -97,6 +100,10 @@ function ProductCard({ product, onReadClick }: { product: any; onReadClick: (p: 
           {isDirectBook ? (
             <button onClick={() => onReadClick(product)} style={{ flex: 1, textAlign: 'center', background: 'var(--color-pine-primary)', color: 'white', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', border: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', cursor: 'pointer', minHeight: '44px' }}>
               <Book size={14} /> Read E-Book
+            </button>
+          ) : isDirectPrint ? (
+            <button onClick={() => onViewPrintClick(product)} style={{ flex: 1, textAlign: 'center', background: 'var(--color-pine-primary)', color: 'white', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', border: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', cursor: 'pointer', minHeight: '44px' }}>
+              <Box size={14} /> View 3D Model
             </button>
           ) : (
             <>
@@ -241,8 +248,9 @@ export function Apps() {
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Tabs management
-  const [activeTab, setActiveTab] = useState<'products' | 'studio'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'studio' | 'prints'>('products');
   const [readingBook, setReadingBook] = useState<any | null>(null);
+  const [viewingPrint, setViewingPrint] = useState<any | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setCurrentUser(session?.user ?? null));
@@ -284,6 +292,9 @@ export function Apps() {
         <button onClick={() => setActiveTab('studio')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'studio' ? '3px solid var(--color-pine-primary)' : '3px solid transparent', padding: '0.65rem 1rem', fontSize: '1rem', fontWeight: activeTab === 'studio' ? 700 : 500, color: activeTab === 'studio' ? 'var(--color-pine-dark)' : 'var(--color-text-muted)', cursor: 'pointer', marginBottom: '-2px' }}>
           Book Studio
         </button>
+        <button onClick={() => setActiveTab('prints')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'prints' ? '3px solid var(--color-pine-primary)' : '3px solid transparent', padding: '0.65rem 1rem', fontSize: '1rem', fontWeight: activeTab === 'prints' ? 700 : 500, color: activeTab === 'prints' ? 'var(--color-pine-dark)' : 'var(--color-text-muted)', cursor: 'pointer', marginBottom: '-2px' }}>
+          3D Print Studio
+        </button>
       </div>
 
       {activeTab === 'studio' ? (
@@ -294,6 +305,16 @@ export function Apps() {
             <PenLine size={48} style={{ opacity: 0.3, marginBottom: '1rem', color: 'var(--color-pine-dark)' }} />
             <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--color-pine-dark)' }}>Please sign in to access Book Studio.</p>
             <p style={{ margin: '0.25rem 0', fontSize: '0.875rem' }}>Start composing and self-publishing your own stories.</p>
+          </div>
+        )
+      ) : activeTab === 'prints' ? (
+        currentUser ? (
+          <PrintStudio userId={currentUser.id} onPublished={fetchProducts} />
+        ) : (
+          <div className="card" style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--color-text-muted)' }}>
+            <Box size={48} style={{ opacity: 0.3, marginBottom: '1rem', color: 'var(--color-pine-dark)' }} />
+            <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--color-pine-dark)' }}>Please sign in to access 3D Print Studio.</p>
+            <p style={{ margin: '0.25rem 0', fontSize: '0.875rem' }}>Construct and publish 3D prints directly.</p>
           </div>
         )
       ) : (
@@ -336,6 +357,7 @@ export function Apps() {
                   key={p.id}
                   product={p}
                   onReadClick={(p) => setReadingBook(p)}
+                  onViewPrintClick={(p) => setViewingPrint(p)}
                 />
               ))}
             </div>
@@ -355,6 +377,14 @@ export function Apps() {
             <BookReader
               product={readingBook}
               onClose={() => setReadingBook(null)}
+            />
+          )}
+
+          {/* 3D Print Reading Modal */}
+          {viewingPrint && (
+            <PrintViewer
+              product={viewingPrint}
+              onClose={() => setViewingPrint(null)}
             />
           )}
         </>
