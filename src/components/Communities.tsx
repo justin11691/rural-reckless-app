@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Search, TrendingUp, Plus, X, Lock, Settings, UserCheck, UserX, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -138,6 +139,7 @@ function ManagePanel({ group, currentUserId, onClose }: { group:any; currentUser
 function GroupCard({ group, currentUserId, membership, onAction }: { group:any; currentUserId:string|null; membership:any; onAction:()=>void }) {
   const [managing, setManaging] = useState(false);
   const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
 
   const isOwner = group.owner_id === currentUserId;
   const status = membership?.status;
@@ -197,7 +199,7 @@ function GroupCard({ group, currentUserId, membership, onAction }: { group:any; 
           </div>
         </div>
         <p style={{ margin:0, color:'var(--color-text-main)', lineHeight:1.5, fontSize:'0.9rem' }}>{group.description||'No description yet.'}</p>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:'0.75rem', borderTop:'1px solid var(--color-border)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:'0.75rem', borderTop:'1px solid var(--color-border)', flexWrap:'wrap', gap:'0.5rem' }}>
           {group.active > 0
             ? <span style={{ display:'flex', alignItems:'center', gap:'0.4rem', color:'var(--color-pine-primary)', fontSize:'0.85rem' }}><TrendingUp size={14}/> {group.active} online</span>
             : <span style={{ fontSize:'0.85rem', color:'var(--color-text-muted)' }}>Just getting started</span>
@@ -209,6 +211,13 @@ function GroupCard({ group, currentUserId, membership, onAction }: { group:any; 
               </button>
             )}
             {actionBtn}
+            <button
+              onClick={()=>navigate(`/communities/${group.id}`)}
+              style={{ padding:'0.4rem 0.9rem', fontSize:'0.875rem', background:'var(--color-pine-primary)', color:'white', border:'none' }}
+              aria-label={`View ${group.name}`}
+            >
+              View →
+            </button>
           </div>
         </div>
       </div>

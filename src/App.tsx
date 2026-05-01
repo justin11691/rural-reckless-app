@@ -9,6 +9,7 @@ import { Auth } from './components/Auth';
 import { Marketplace } from './components/Marketplace';
 import { Apps } from './components/Apps';
 import { Communities } from './components/Communities';
+import { GroupPage } from './components/GroupPage';
 import { Messages } from './components/Messages';
 import { supabase } from './lib/supabase';
 
@@ -168,6 +169,10 @@ function App() {
 
           <Route path="/communities" element={
             <PageWrapper><Communities /></PageWrapper>
+          } />
+
+          <Route path="/communities/:id" element={
+            <PageWrapper><GroupPage /></PageWrapper>
           } />
 
           <Route path="/market" element={

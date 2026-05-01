@@ -722,4 +722,14 @@
   padding: 0;
   cursor: pointer;
 }
- 
+
+/* ─── Group Page ─────────────────────────────────────────────────────────── */
+.group-layout {
+  grid-template-columns: 1fr 260px;
+}
+
+@media (max-width: 768px) {
+  .group-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
