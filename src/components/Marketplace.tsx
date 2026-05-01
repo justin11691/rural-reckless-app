@@ -106,10 +106,10 @@ function ListModal({ onClose, onCreated, userId, type }: { onClose:()=>void; onC
   );
 }
 
-function ListingCard({ listing }: { listing:any }) {
+function ListingCard({ listing, onSelect }: { listing:any; onSelect:(l:any)=>void }) {
   const isSample = listing.is_sample;
   return (
-    <div className="card" style={{ padding:0, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+    <div className="card" onClick={() => onSelect(listing)} style={{ padding:0, overflow:'hidden', display:'flex', flexDirection:'column', cursor:'pointer' }}>
       {listing.cover_image_url
         ? <img src={listing.cover_image_url} alt={listing.title} style={{ width:'100%', height:170, objectFit:'cover' }} loading="lazy"/>
         : <div style={{ height:80, background:'linear-gradient(135deg, var(--color-pine-dark), var(--color-pine-light))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'2rem' }}>🌿</div>
@@ -130,16 +130,16 @@ function ListingCard({ listing }: { listing:any }) {
           </p>
         )}
         {listing.description && <p style={{ margin:'0.15rem 0 0', fontSize:'0.82rem', color:'var(--color-text-main)', lineHeight:1.5, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' } as any}>{listing.description}</p>}
-        <div style={{ marginTop:'auto', paddingTop:'0.75rem', display:'flex', gap:'0.4rem', flexWrap:'wrap' }}>
+        <div style={{ marginTop:'auto', paddingTop:'0.75rem', display:'flex', gap:'0.4rem', flexWrap:'wrap' }} onClick={e => e.stopPropagation()}>
           {isSample ? (
-            <span style={{ flex:1, textAlign:'center', background:'var(--color-pine-primary)', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', fontWeight:600, fontSize:'0.8rem', opacity:0.5 }}>Sample listing</span>
+            <button style={{ flex:1, textAlign:'center', background:'var(--color-pine-primary)', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', fontWeight:600, fontSize:'0.8rem', border:'none', cursor:'pointer' }}>View Details</button>
           ) : (<>
             {listing.payment_url && <a href={listing.payment_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#635BFF', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><CreditCard size={12}/> Card</a>}
             {listing.crypto_url && <a href={listing.crypto_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#F7931A', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><Bitcoin size={12}/> Crypto</a>}
             {listing.etsy_url && <a href={listing.etsy_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#F56400', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><ExternalLink size={12}/> Etsy</a>}
             {!listing.payment_url && !listing.crypto_url && !listing.etsy_url ? (
               <Link to="/messages" state={{ receiverId: listing.user_id, listingId: listing.id }} style={{ flex:1, textAlign:'center', background:'var(--color-bg-base)', color:'var(--color-text-main)', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem', border:'1px solid var(--color-border)' }}>
-                <MessageSquare size={12}/> Message seller
+                <MessageSquare size={12}/> Message
               </Link>
             ) : (
               <Link to="/messages" state={{ receiverId: listing.user_id, listingId: listing.id }} title="Ask a question" style={{ display:'flex', alignItems:'center', justifyContent:'center', background:'var(--color-bg-base)', color:'var(--color-text-main)', padding:'0.4rem', borderRadius:'var(--radius-md)', textDecoration:'none', border:'1px solid var(--color-border)' }}>
@@ -161,6 +161,7 @@ export function Marketplace() {
   const [filterCat, setFilterCat] = useState('All');
   const [filterState, setFilterState] = useState('All');
   const [showModal, setShowModal] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<any|null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -243,14 +244,59 @@ export function Marketplace() {
         <>
           {listings.length === 0 && <p style={{ fontSize:'0.82rem', color:'var(--color-text-muted)', background:'var(--color-bg-base)', padding:'0.5rem 0.85rem', borderRadius:'var(--radius-md)', border:'1px solid var(--color-border)' }}>Showing example listings — be the first real seller!</p>}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(230px, 1fr))', gap:'1.25rem' }}>
-            {filtered.map(l=><ListingCard key={l.id} listing={l}/>)}
+            {filtered.map(l=><ListingCard key={l.id} listing={l} onSelect={(item) => setSelectedListing(item)}/>)}
           </div>
+          <AdSenseBanner />
         </>
+      )}
+
+      {selectedListing && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1.5rem', zIndex:1000 }} onClick={() => setSelectedListing(null)}>
+          <div className="card" style={{ maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: 'var(--color-bg-base)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelectedListing(null)} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={20}/></button>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.75rem', background: 'rgba(0,0,0,0.05)', border: '1px solid var(--color-border)', padding: '0.15rem 0.55rem', borderRadius: 4 }}>{selectedListing.category}</span>
+              {selectedListing.condition && <span style={{ fontSize: '0.75rem', background: '#e8f5e9', border: '1px solid #a5d6a7', padding: '0.15rem 0.55rem', borderRadius: 4, color: '#2e7d32' }}>{selectedListing.condition}</span>}
+            </div>
+            {selectedListing.cover_image_url && <img src={selectedListing.cover_image_url} alt={selectedListing.title} style={{ width: '100%', maxHeight: '280px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }} />}
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, color: 'var(--color-pine-dark)', fontSize: '1.4rem' }}>{selectedListing.title}</h2>
+              <span style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--color-accent)' }}>{selectedListing.price_display}</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Posted by {selectedListing.seller_name || 'Anonymous'}</p>
+            {selectedListing.description && <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--color-text-main)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{selectedListing.description}</p>}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              {selectedListing.payment_url && <a href={selectedListing.payment_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#635BFF', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><CreditCard size={14}/> Buy with Card</a>}
+              {selectedListing.crypto_url && <a href={selectedListing.crypto_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#F7931A', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><Bitcoin size={14}/> Buy with Crypto</a>}
+              {selectedListing.etsy_url && <a href={selectedListing.etsy_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#F56400', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><ExternalLink size={14}/> Etsy Shop</a>}
+              {!selectedListing.payment_url && !selectedListing.crypto_url && !selectedListing.etsy_url ? (
+                <Link to="/messages" state={{ receiverId: selectedListing.user_id, listingId: selectedListing.id }} style={{ flex: 1, textAlign: 'center', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: '1px solid var(--color-border)' }}>
+                  <MessageSquare size={14}/> Message seller
+                </Link>
+              ) : (
+                <Link to="/messages" state={{ receiverId: selectedListing.user_id, listingId: selectedListing.id }} title="Ask a question" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', border: '1px solid var(--color-border)', fontSize: '0.875rem', fontWeight: 600, flex: 1 }}>
+                  <MessageSquare size={14}/> Contact Seller
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {showModal && currentUser && (
         <ListModal userId={currentUser.id} type={tab} onClose={()=>setShowModal(false)} onCreated={()=>{ setShowModal(false); fetchListings(); }}/>
       )}
+    </div>
+  );
+}
+
+function AdSenseBanner() {
+  return (
+    <div className="card" style={{ padding: '1.25rem', background: 'var(--color-bg-base)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', margin: '2rem 0 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+      <span style={{ fontSize: '0.65rem', background: 'rgba(0,0,0,0.06)', border: '1px solid var(--color-border)', padding: '0.15rem 0.55rem', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', fontWeight: 600 }}>Sponsored Ad</span>
+      <div style={{ minHeight: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+        Google AdSense Slot — Responsive Ad Unit (Auto-optimized)
+      </div>
     </div>
   );
 }

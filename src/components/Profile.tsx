@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Palette, PlaySquare, Music, UserPlus, ShoppingBag, Save, Edit3, Upload, ExternalLink, Trash2, MapPin, Image as ImageIcon, Camera, Plus, X } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { Palette, PlaySquare, Music, UserPlus, ShoppingBag, Save, Edit3, Upload, ExternalLink, Trash2, MapPin, Image as ImageIcon, Camera, Plus, X, MessageSquare } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export function Profile() {
@@ -34,6 +34,8 @@ export function Profile() {
     pinterest_url: '',
     store_name: '',
     location_state: '',
+    physical_store: '',
+    art_form: 'General',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -83,6 +85,20 @@ export function Profile() {
       let aboutText = data.about_me || '';
       let parsedPortfolio: any[] = [];
       let parsedFriends: any[] = [];
+      let parsedPhysicalStore = '';
+      let parsedArtForm = 'General';
+
+      if (aboutText.includes('ART_FORM_JSON:')) {
+        const parts = aboutText.split('ART_FORM_JSON:');
+        aboutText = parts[0].trim();
+        parsedArtForm = parts[1].split('PHYSICAL_STORE_JSON:')[0].split('PORTFOLIO_JSON:')[0].split('FRIENDS_JSON:')[0].trim();
+      }
+
+      if (aboutText.includes('PHYSICAL_STORE_JSON:')) {
+        const parts = aboutText.split('PHYSICAL_STORE_JSON:');
+        aboutText = parts[0].trim();
+        parsedPhysicalStore = parts[1].split('PORTFOLIO_JSON:')[0].split('FRIENDS_JSON:')[0].trim();
+      }
 
       if (aboutText.includes('PORTFOLIO_JSON:')) {
         const parts = aboutText.split('PORTFOLIO_JSON:');
@@ -118,6 +134,8 @@ export function Profile() {
         pinterest_url: data.pinterest_url || '',
         store_name: data.store_name || '',
         location_state: data.location_state || '',
+        physical_store: parsedPhysicalStore,
+        art_form: parsedArtForm,
       });
       setProfileTheme({
         bgColor: data.theme_bg_color || '#1E2923',
@@ -149,7 +167,11 @@ export function Profile() {
     if (!profile?.id) return;
     setSaving(true);
 
-    const aboutToSave = profileFormData.about_me + (portfolio.length > 0 ? ' PORTFOLIO_JSON:' + JSON.stringify(portfolio) : '');
+    const aboutToSave = profileFormData.about_me + 
+      (profileFormData.art_form ? ' ART_FORM_JSON:' + profileFormData.art_form : '') +
+      (profileFormData.physical_store ? ' PHYSICAL_STORE_JSON:' + profileFormData.physical_store : '') +
+      (portfolio.length > 0 ? ' PORTFOLIO_JSON:' + JSON.stringify(portfolio) : '') +
+      (friends.length > 0 ? ' FRIENDS_JSON:' + JSON.stringify(friends) : '');
 
     const { error } = await supabase.from('profiles')
       .upsert({ 
@@ -332,7 +354,7 @@ export function Profile() {
             ) : (
               <h1 style={{ margin: 0 }}>{profile?.full_name || profile?.username || 'Anonymous Maker'}</h1>
             )}
-            {isMyProfile && (
+            {isMyProfile ? (
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => isEditingProfile ? saveProfile() : setIsEditingProfile(true)}
@@ -342,11 +364,15 @@ export function Profile() {
                 >
                   {isEditingProfile ? <><Save size={15} aria-hidden /> Save</> : <><Edit3 size={15} aria-hidden /> Edit Profile</>}
                 </button>
-                {!isEditingProfile && (
-                  <button className="follow-btn" aria-label="Follow this user">
-                    <UserPlus size={15} aria-hidden /> Follow
-                  </button>
-                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button className="follow-btn" onClick={() => alert('Connected!')} aria-label="Follow this user" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'var(--color-accent)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                  <UserPlus size={15} aria-hidden /> Connect / Follow
+                </button>
+                <Link to="/messages" state={{ receiverId: profile?.id }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
+                  <MessageSquare size={15} aria-hidden /> Message
+                </Link>
               </div>
             )}
           </div>
@@ -434,6 +460,53 @@ export function Profile() {
               <div className="stat"><strong>{myListings.length}</strong> Items Listed</div>
               <div className="stat"><strong>{profile?.location_state || 'Online'}</strong> Region</div>
             </div>
+
+            {isEditingProfile ? (
+              <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', opacity: 0.8, display: 'block', marginBottom: '0.25rem' }}>🎨 Creative & Artisan Category</label>
+                  <select
+                    className="post-input"
+                    value={profileFormData.art_form}
+                    onChange={e => setProfileFormData({ ...profileFormData, art_form: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-md)' }}
+                  >
+                    <option value="General">General Artisan & Maker</option>
+                    <option value="Pottery">Pottery & Ceramics</option>
+                    <option value="Tattoo">Tattoo & Flash Artist</option>
+                    <option value="Digital">Digital & 3D Print Art</option>
+                    <option value="Custom Painter">Fine Art & Custom Painter</option>
+                    <option value="Photography">Photography & Prints</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.82rem', opacity: 0.8, display: 'block', marginBottom: '0.25rem' }}>📍 Physical Storefront Address</label>
+                  <input
+                    type="text"
+                    className="post-input"
+                    value={profileFormData.physical_store}
+                    onChange={e => setProfileFormData({ ...profileFormData, physical_store: e.target.value })}
+                    placeholder="e.g. 123 Main St, Asheville, NC"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: '1rem', borderTop: '1px solid var(--color-border)', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 0.25rem', fontSize: '0.82rem', color: 'var(--color-pine-dark)', opacity: 0.8 }}>🎨 Creative Style</h4>
+                  <span style={{ fontSize: '0.85rem', background: 'var(--color-pine-light)', border: '1px solid var(--color-border)', padding: '0.25rem 0.65rem', borderRadius: '12px', color: 'var(--color-pine-dark)', fontWeight: 600, display: 'inline-block' }}>
+                    {profileFormData.art_form || 'General Maker'}
+                  </span>
+                </div>
+                {profileFormData.physical_store && (
+                  <div>
+                    <h4 style={{ margin: '0 0 0.25rem', fontSize: '0.82rem', color: 'var(--color-pine-dark)', opacity: 0.8 }}>📍 Physical Location</h4>
+                    <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--color-text-main)' }}>{profileFormData.physical_store}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Featured Stores Config Fields */}
