@@ -16,6 +16,7 @@ export function Profile() {
     music_url: '',
     etsy_url: '',
     pinterest_url: '',
+    store_name: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -53,6 +54,7 @@ export function Profile() {
         music_url: data.music_url || '',
         etsy_url: data.etsy_url || '',
         pinterest_url: data.pinterest_url || '',
+        store_name: data.store_name || '',
       });
       setProfileTheme({
         bgColor: data.theme_bg_color || '#1E2923',
@@ -282,8 +284,22 @@ export function Profile() {
           {/* Social Links Edit Fields */}
           {isEditingProfile && (
             <div className="profile-card">
-              <h3>External Links</h3>
+              <h3>Shop & External Links</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--profile-text)', opacity: 0.8, display: 'block', marginBottom: '0.3rem' }}>
+                    🏪 Custom Shop Name
+                  </label>
+                  <input
+                    type="text"
+                    className="post-input"
+                    value={profileFormData.store_name}
+                    onChange={e => setProfileFormData({ ...profileFormData, store_name: e.target.value })}
+                    placeholder="e.g. My Custom Shop"
+                    style={{ width: '100%', margin: 0 }}
+                    aria-label="Custom shop name"
+                  />
+                </div>
                 <div>
                   <label style={{ fontSize: '0.85rem', color: 'var(--profile-text)', opacity: 0.8, display: 'block', marginBottom: '0.3rem' }}>
                     🛍️ Etsy Shop URL
@@ -337,7 +353,7 @@ export function Profile() {
         <div className="profile-main">
           <div className="profile-card storefront-card">
             <div className="storefront-header">
-              <h3><ShoppingBag size={18} aria-hidden /> {profile?.full_name || profile?.username || 'My'}'s Shop</h3>
+              <h3><ShoppingBag size={18} aria-hidden /> {profile?.store_name?.trim() || `${profile?.full_name || profile?.username || 'My'}'s Shop`}</h3>
               <button className="view-all-btn">View All</button>
             </div>
             <div className="storefront-grid">
