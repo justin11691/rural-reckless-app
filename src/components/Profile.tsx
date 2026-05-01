@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Palette, PlaySquare, Music, UserPlus, ShoppingBag, Save, Edit3, Upload, ExternalLink } from 'lucide-react';
+import { Palette, PlaySquare, Music, UserPlus, ShoppingBag, Save, Edit3, Upload, ExternalLink, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export function Profile() {
@@ -104,6 +104,17 @@ export function Profile() {
       setIsEditingProfile(false);
     }
     setSaving(false);
+  }
+
+  async function deleteListing(id: string, isDigital: boolean) {
+    if (!confirm('Are you sure you want to delete this listing?')) return;
+    const table = isDigital ? 'digital_products' : 'market_listings';
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (!error) {
+      setMyListings(myListings.filter(l => l.id !== id));
+    } else {
+      alert('Error deleting listing: ' + error.message);
+    }
   }
 
   async function handleAvatarUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -382,7 +393,14 @@ export function Profile() {
                     <div className="store-item-info">
                       <h4>{item.title}</h4>
                       {item.isDigital && item.description && <p className="app-desc">{item.description}</p>}
-                      <span className="price">{item.price_display}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="price">{item.price_display}</span>
+                        {isEditingProfile && (
+                          <button onClick={() => deleteListing(item.id, item.isDigital)} style={{ background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', padding: '0.2rem' }} title="Delete listing">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))

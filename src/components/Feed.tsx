@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ImageIcon, ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu } from 'lucide-react';
+import { ImageIcon, ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu, Trash2, Send } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 function timeAgo(dateStr: string) {
@@ -23,6 +23,8 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [posting, setPosting] = useState(false);
+  const [activeCommentPost, setActiveCommentPost] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
 
   useEffect(() => { fetchPosts(); }, []);
 
@@ -45,7 +47,34 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
     }
 
-    setPosts((postsData || []).map((p: any) => ({ ...p, profiles: profileMap[p.user_id] || null })));
+    // Fetch likes and comments count
+    const postIds = (postsData || []).map((p: any) => p.id);
+    let likesMap: Record<string, { count: number, me: boolean }> = {};
+    let commentsMap: Record<string, any[]> = {};
+    
+    if (postIds.length > 0) {
+      const { data: likes } = await supabase.from('post_likes').select('post_id, user_id').in('post_id', postIds);
+      const { data: comments } = await supabase.from('post_comments').select('*, profiles:user_id(username, full_name, avatar_url)').in('post_id', postIds).order('created_at', { ascending: true });
+      
+      (likes || []).forEach(l => {
+        if (!likesMap[l.post_id]) likesMap[l.post_id] = { count: 0, me: false };
+        likesMap[l.post_id].count++;
+        if (currentUser && l.user_id === currentUser.id) likesMap[l.post_id].me = true;
+      });
+      
+      (comments || []).forEach(c => {
+        if (!commentsMap[c.post_id]) commentsMap[c.post_id] = [];
+        commentsMap[c.post_id].push(c);
+      });
+    }
+
+    setPosts((postsData || []).map((p: any) => ({ 
+      ...p, 
+      profiles: profileMap[p.user_id] || null,
+      like_count: likesMap[p.id]?.count || 0,
+      liked_by_me: likesMap[p.id]?.me || false,
+      comments: commentsMap[p.id] || []
+    })));
     setLoading(false);
   }
 
@@ -56,6 +85,50 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     if (!e) { setContent(''); fetchPosts(); }
     else setError('Could not post. Try again.');
     setPosting(false);
+  }
+
+  async function toggleLike(postId: string, currentlyLiked: boolean) {
+    if (!currentUser) return;
+    
+    // Optimistic UI
+    setPosts(posts.map(p => {
+      if (p.id === postId) {
+        return { ...p, liked_by_me: !currentlyLiked, like_count: p.like_count + (currentlyLiked ? -1 : 1) };
+      }
+      return p;
+    }));
+
+    if (currentlyLiked) {
+      await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
+    } else {
+      await supabase.from('post_likes').insert([{ post_id: postId, user_id: currentUser.id }]);
+    }
+  }
+
+  async function submitComment(postId: string) {
+    if (!commentText.trim() || !currentUser) return;
+    
+    const { data, error } = await supabase.from('post_comments').insert([{ 
+      post_id: postId, 
+      user_id: currentUser.id, 
+      content: commentText.trim() 
+    }]).select('*, profiles:user_id(username, full_name, avatar_url)').single();
+    
+    if (!error && data) {
+      setPosts(posts.map(p => {
+        if (p.id === postId) {
+          return { ...p, comments: [...(p.comments || []), data] };
+        }
+        return p;
+      }));
+      setCommentText('');
+    }
+  }
+
+  async function deletePost(postId: string) {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    setPosts(posts.filter(p => p.id !== postId));
+    await supabase.from('posts').delete().eq('id', postId);
   }
 
   return (
@@ -102,16 +175,59 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
                 <span className="post-time">{timeAgo(post.created_at)}{post.profiles?.tagline ? ` · ${post.profiles.tagline}` : ''}</span>
               </div>
             </div>
+            {currentUser && currentUser.id === post.user_id && (
+              <button onClick={() => deletePost(post.id)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '0.25rem' }} title="Delete post">
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
           <div className="post-content">
             <p className="post-text">{post.content}</p>
             {post.image_url && <img src={post.image_url} alt="Post image" className="post-image" loading="lazy" />}
           </div>
           <div className="post-footer">
-            <button className="interaction-btn"><ThumbsUp size={18} /> {post.likes ?? 0}</button>
-            <button className="interaction-btn"><MessageCircle size={18} /> {post.comment_count ?? 0}</button>
+            <button className="interaction-btn" onClick={() => toggleLike(post.id, post.liked_by_me)} style={{ color: post.liked_by_me ? 'var(--color-accent)' : 'inherit' }}>
+              <ThumbsUp size={18} fill={post.liked_by_me ? "currentColor" : "none"} /> {post.like_count ?? 0}
+            </button>
+            <button className="interaction-btn" onClick={() => setActiveCommentPost(activeCommentPost === post.id ? null : post.id)}>
+              <MessageCircle size={18} /> {post.comments?.length || 0}
+            </button>
             <button className="interaction-btn"><Share2 size={18} /> Share</button>
           </div>
+          
+          {/* Comments Section */}
+          {activeCommentPost === post.id && (
+            <div style={{ padding: '1rem', borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-base)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+                {(post.comments || []).map((c: any) => (
+                  <div key={c.id} style={{ display: 'flex', gap: '0.5rem' }}>
+                    <img src={c.profiles?.avatar_url || '/images/avatar_maker.png'} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+                    <div style={{ background: 'var(--color-bg-card)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', flex: 1 }}>
+                      <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 600 }}>{c.profiles?.full_name || c.profiles?.username}</p>
+                      <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem' }}>{c.content}</p>
+                    </div>
+                  </div>
+                ))}
+                {(!post.comments || post.comments.length === 0) && (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>No comments yet. Be the first!</p>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input 
+                  type="text" 
+                  className="post-input" 
+                  placeholder="Write a comment..." 
+                  value={commentText} 
+                  onChange={e => setCommentText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') submitComment(post.id); }}
+                  style={{ flex: 1, margin: 0, padding: '0.5rem 0.75rem' }} 
+                />
+                <button onClick={() => submitComment(post.id)} disabled={!commentText.trim()} style={{ background: 'var(--color-pine-dark)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', padding: '0 0.75rem', display: 'flex', alignItems: 'center' }}>
+                  <Send size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </article>
       ))}
     </div>

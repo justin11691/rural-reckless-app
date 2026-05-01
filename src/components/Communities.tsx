@@ -4,15 +4,6 @@ import { supabase } from '../lib/supabase';
 
 const CATEGORIES = ['General','Woodworking','3D Printing','Arts & Crafts','Homesteading','Reading Club','Farming','Music','Writing','Recipes & Cooking','Sewing & Patterns','Livestock & Pets','Other'];
 const ICONS: Record<string,string> = { 'Woodworking':'🪵','3D Printing':'🧊','Arts & Crafts':'🎨','Homesteading':'🌱','Reading Club':'📖','Farming':'🌾','Music':'🎸','Writing':'✍️','General':'🏡','Recipes & Cooking':'🍳','Sewing & Patterns':'🧵','Livestock & Pets':'🐄','Other':'🤠' };
-const FEATURED = [
-  { id:'f1', name:"Woodworkers Guild", member_count:12400, description:"Share builds, ask about joinery, talk tools.", active:342, icon:"🌲", category:"Woodworking", is_public:true, owner_id:'featured' },
-  { id:'f2', name:"3D Printing Hub", member_count:8100, description:"STL files, slicer configs, troubleshooting prints.", active:156, icon:"🧊", category:"3D Printing", is_public:true, owner_id:'featured' },
-  { id:'f3', name:"Indie Authors", member_count:5200, description:"Self-publishing strategies, cover design, beta readers.", active:89, icon:"📚", category:"Writing", is_public:true, owner_id:'featured' },
-  { id:'f4', name:"Off-Grid Living", member_count:15800, description:"Solar setups, gardening, sustainable rural tips.", active:412, icon:"⛺", category:"Homesteading", is_public:true, owner_id:'featured' },
-  { id:'f5', name:"Recipes & Home Cooking", member_count:9300, description:"Share personal recipes, family favorites, preservation techniques, and cooking tips.", active:284, icon:"🍳", category:"Recipes & Cooking", is_public:true, owner_id:'featured' },
-  { id:'f6', name:"Sewing, Quilting & Patterns", member_count:6700, description:"Share patterns, swap fabric tips, show off your latest project. All skill levels welcome.", active:198, icon:"🧵", category:"Sewing & Patterns", is_public:true, owner_id:'featured' },
-  { id:'f7', name:"Livestock & Pet Tips", member_count:11200, description:"Cattle, chickens, goats, dogs, horses — share care tips, health advice, and breeding knowledge.", active:317, icon:"🐄", category:"Livestock & Pets", is_public:true, owner_id:'featured' },
-];
 
 function fmt(n:number) { return n>=1000?`${(n/1000).toFixed(1)}k`:String(n); }
 
@@ -244,7 +235,7 @@ export function Communities() {
 
   async function fetchGroups() {
     setLoading(true);
-    const { data } = await supabase.from('groups').select('*').order('created_at', { ascending:false });
+    const { data } = await supabase.from('communities').select('*').order('created_at', { ascending:false });
     setGroups(data||[]);
     if ((await supabase.auth.getSession()).data.session) {
       const uid = (await supabase.auth.getSession()).data.session!.user.id;
@@ -257,7 +248,7 @@ export function Communities() {
   async function createGroup() {
     if (!form.name.trim()||!currentUser) return;
     setCreating(true);
-    const { error } = await supabase.from('groups').insert([{ owner_id:currentUser.id, name:form.name.trim(), description:form.description.trim(), category:form.category, is_public:form.is_public }]);
+    const { error } = await supabase.from('communities').insert([{ owner_id:currentUser.id, name:form.name.trim(), description:form.description.trim(), category:form.category, is_public:form.is_public }]);
     if (!error) { setShowCreate(false); setForm({ name:'', description:'', category:'General', is_public:true }); fetchGroups(); }
     else alert('Could not create group: '+error.message);
     setCreating(false);
@@ -265,8 +256,7 @@ export function Communities() {
 
   const getMembership = (groupId:string) => memberships.find((m:any)=>m.group_id===groupId);
 
-  const allGroups = [...FEATURED, ...groups];
-  const filtered = allGroups.filter(g => !search || g.name.toLowerCase().includes(search.toLowerCase()) || (g.category||'').toLowerCase().includes(search.toLowerCase()));
+  const filtered = groups.filter(g => !search || g.name.toLowerCase().includes(search.toLowerCase()) || (g.category||'').toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div style={{ flex:1, padding:'2rem', display:'flex', flexDirection:'column', gap:'2rem', overflowX:'hidden' }}>
