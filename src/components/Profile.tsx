@@ -560,23 +560,24 @@ export function Profile() {
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => setActiveSubTab('storefront')}
-              style={{ flex: 1, minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: activeSubTab === 'storefront' ? '2px solid var(--profile-accent)' : '1px solid var(--color-border)', background: activeSubTab === 'storefront' ? 'var(--color-bg-base)' : 'transparent', color: 'var(--profile-text)', fontWeight: 600, cursor: 'pointer' }}
+              style={{ flex: 1, minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: activeSubTab === 'storefront' ? '2px solid var(--color-pine-primary)' : '1px solid var(--color-border)', background: activeSubTab === 'storefront' ? 'var(--color-pine-primary)' : 'rgba(255, 255, 255, 0.05)', color: activeSubTab === 'storefront' ? 'white' : 'var(--color-text-main)', fontWeight: 600, cursor: 'pointer' }}
             >
               <ShoppingBag size={18} /> Direct Storefront
             </button>
             <button
               onClick={() => setActiveSubTab('gallery')}
-              style={{ flex: 1, minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: activeSubTab === 'gallery' ? '2px solid var(--profile-accent)' : '1px solid var(--color-border)', background: activeSubTab === 'gallery' ? 'var(--color-bg-base)' : 'transparent', color: 'var(--profile-text)', fontWeight: 600, cursor: 'pointer' }}
+              style={{ flex: 1, minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: activeSubTab === 'gallery' ? '2px solid var(--color-pine-primary)' : '1px solid var(--color-border)', background: activeSubTab === 'gallery' ? 'var(--color-pine-primary)' : 'rgba(255, 255, 255, 0.05)', color: activeSubTab === 'gallery' ? 'white' : 'var(--color-text-main)', fontWeight: 600, cursor: 'pointer' }}
             >
               <Camera size={18} /> Art Gallery / Showcase
             </button>
             <button
               onClick={() => setActiveSubTab('friends')}
-              style={{ flex: 1, minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: activeSubTab === 'friends' ? '2px solid var(--profile-accent)' : '1px solid var(--color-border)', background: activeSubTab === 'friends' ? 'var(--color-bg-base)' : 'transparent', color: 'var(--profile-text)', fontWeight: 600, cursor: 'pointer' }}
+              style={{ flex: 1, minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: activeSubTab === 'friends' ? '2px solid var(--color-pine-primary)' : '1px solid var(--color-border)', background: activeSubTab === 'friends' ? 'var(--color-pine-primary)' : 'rgba(255, 255, 255, 0.05)', color: activeSubTab === 'friends' ? 'white' : 'var(--color-text-main)', fontWeight: 600, cursor: 'pointer' }}
             >
               <UserPlus size={18} /> Connect Friends
             </button>
           </div>
+
 
           {activeSubTab === 'storefront' ? (
             <div className="profile-card storefront-card">

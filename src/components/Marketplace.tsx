@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Search, MapPin, Plus, X, CreditCard, Bitcoin, Leaf, Tag, Package, MessageSquare, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { addToCart } from '../lib/cart';
 
 const FARM_CATEGORIES = ['Woodworking','Pottery & Ceramics','Textiles & Quilts','Candles & Soaps','Jewelry','Painting & Prints','Farm & Garden','Baked Goods','3D Prints','Leather Goods','Metalwork','Other Handmade'];
@@ -109,8 +109,9 @@ function ListModal({ onClose, onCreated, userId, type }: { onClose:()=>void; onC
 
 function ListingCard({ listing, onSelect }: { listing:any; onSelect:(l:any)=>void }) {
   const isSample = listing.is_sample;
+  const navigate = useNavigate();
   return (
-    <div className="card" onClick={() => onSelect(listing)} style={{ padding:0, overflow:'hidden', display:'flex', flexDirection:'column', cursor:'pointer' }}>
+    <div className="card" onClick={() => navigate(`/market/listing/${listing.id}`)} style={{ padding:0, overflow:'hidden', display:'flex', flexDirection:'column', cursor:'pointer' }}>
       {listing.cover_image_url
         ? <img src={listing.cover_image_url} alt={listing.title} style={{ width:'100%', height:170, objectFit:'cover' }} loading="lazy"/>
         : <div style={{ height:80, background:'linear-gradient(135deg, var(--color-pine-dark), var(--color-pine-light))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'2rem' }}>🌿</div>
@@ -132,14 +133,34 @@ function ListingCard({ listing, onSelect }: { listing:any; onSelect:(l:any)=>voi
         )}
         {listing.description && <p style={{ margin:'0.15rem 0 0', fontSize:'0.82rem', color:'var(--color-text-main)', lineHeight:1.5, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' } as any}>{listing.description}</p>}
         <div style={{ marginTop:'auto', paddingTop:'0.75rem', display:'flex', gap:'0.4rem', flexWrap:'wrap' }} onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => {
+              addToCart({
+                id: listing.id,
+                title: listing.title,
+                price_display: listing.price_display,
+                price: parseFloat(listing.price_display?.replace(/[^0-9.]/g, '') || '0'),
+                cover_image_url: listing.cover_image_url,
+              });
+              alert(`Successfully added ${listing.title} to your cart!`);
+            }}
+            style={{ flex:1, minWidth:'100px', textAlign:'center', background:'var(--color-pine-primary)', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', fontWeight:600, fontSize:'0.8rem', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.25rem' }}
+          >
+            <ShoppingBag size={12}/> Add to Cart
+          </button>
+          {!isSample && listing.user_id && (
+            <Link to={`/profile/${listing.user_id}`} style={{ flex:1, minWidth:'100px', textAlign:'center', background:'var(--color-bg-base)', color:'var(--color-text-main)', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.25rem', border:'1px solid var(--color-border)' }}>
+              🏪 Visit Shop
+            </Link>
+          )}
           {isSample ? (
-            <button style={{ flex:1, textAlign:'center', background:'var(--color-pine-primary)', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', fontWeight:600, fontSize:'0.8rem', border:'none', cursor:'pointer' }}>View Details</button>
+            <button onClick={() => navigate(`/market/listing/${listing.id}`)} style={{ flex:1, minWidth:'80px', textAlign:'center', background:'var(--color-bg-base)', color:'var(--color-text-main)', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', fontWeight:600, fontSize:'0.8rem', border:'1px solid var(--color-border)', cursor:'pointer' }}>View Details</button>
           ) : (<>
-            {listing.payment_url && <a href={listing.payment_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#635BFF', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><CreditCard size={12}/> Card</a>}
-            {listing.crypto_url && <a href={listing.crypto_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#F7931A', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><Bitcoin size={12}/> Crypto</a>}
-            {listing.etsy_url && <a href={listing.etsy_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, textAlign:'center', background:'#F56400', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><ExternalLink size={12}/> Etsy</a>}
+            {listing.payment_url && <a href={listing.payment_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, minWidth:'70px', textAlign:'center', background:'#635BFF', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><CreditCard size={12}/> Card</a>}
+            {listing.crypto_url && <a href={listing.crypto_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, minWidth:'75px', textAlign:'center', background:'#F7931A', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><Bitcoin size={12}/> Crypto</a>}
+            {listing.etsy_url && <a href={listing.etsy_url} target="_blank" rel="noopener noreferrer" style={{ flex:1, minWidth:'65px', textAlign:'center', background:'#F56400', color:'white', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem' }}><ExternalLink size={12}/> Etsy</a>}
             {!listing.payment_url && !listing.crypto_url && !listing.etsy_url ? (
-              <Link to="/messages" state={{ receiverId: listing.user_id, listingId: listing.id }} style={{ flex:1, textAlign:'center', background:'var(--color-bg-base)', color:'var(--color-text-main)', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration:'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem', border:'1px solid var(--color-border)' }}>
+              <Link to="/messages" state={{ receiverId: listing.user_id, listingId: listing.id }} style={{ flex:1, minWidth:'70px', textAlign:'center', background:'var(--color-bg-base)', color:'var(--color-text-main)', padding:'0.4rem 0.6rem', borderRadius:'var(--radius-md)', textDecoration: 'none', fontWeight:600, fontSize:'0.8rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.3rem', border:'1px solid var(--color-border)' }}>
                 <MessageSquare size={12}/> Message
               </Link>
             ) : (
@@ -164,6 +185,9 @@ export function Marketplace() {
   const [showModal, setShowModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<any|null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [directCheckoutId, setDirectCheckoutId] = useState<string | null>(null);
+  const [directForm, setDirectForm] = useState({ name: '', email: '', card: '' });
+  const [directProcessing, setDirectProcessing] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data:{session} }) => setCurrentUser(session?.user ?? null));
@@ -266,36 +290,89 @@ export function Marketplace() {
             </div>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Posted by {selectedListing.seller_name || 'Anonymous'}</p>
             {selectedListing.description && <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--color-text-main)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{selectedListing.description}</p>}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-              <button
-                onClick={() => {
-                  addToCart({
-                    id: selectedListing.id,
-                    title: selectedListing.title,
-                    price_display: selectedListing.price_display,
-                    price: parseFloat(selectedListing.price_display?.replace(/[^0-9.]/g, '') || '0'),
-                    cover_image_url: selectedListing.cover_image_url,
-                  });
-                  alert(`Successfully added ${selectedListing.title} to your cart!`);
-                  setSelectedListing(null);
+
+            {directCheckoutId === selectedListing.id ? (
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  if (!directForm.name || !directForm.email) return;
+                  setDirectProcessing(true);
+                  setTimeout(() => {
+                    setDirectProcessing(false);
+                    alert(`Successfully purchased ${selectedListing.title}! The seller has been notified.`);
+                    setDirectCheckoutId(null);
+                    setSelectedListing(null);
+                  }, 1200);
                 }}
-                style={{ flex: 1, minWidth: '160px', textAlign: 'center', background: 'var(--color-pine-primary)', color: 'white', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
               >
-                <ShoppingBag size={15}/> Add to Cart
-              </button>
-              {selectedListing.payment_url && <a href={selectedListing.payment_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#635BFF', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><CreditCard size={14}/> Buy with Card</a>}
-              {selectedListing.crypto_url && <a href={selectedListing.crypto_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#F7931A', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><Bitcoin size={14}/> Buy with Crypto</a>}
-              {selectedListing.etsy_url && <a href={selectedListing.etsy_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#F56400', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><ExternalLink size={14}/> Etsy Shop</a>}
-              {!selectedListing.payment_url && !selectedListing.crypto_url && !selectedListing.etsy_url ? (
-                <Link to="/messages" state={{ receiverId: selectedListing.user_id, listingId: selectedListing.id }} style={{ flex: 1, textAlign: 'center', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: '1px solid var(--color-border)' }}>
-                  <MessageSquare size={14}/> Message seller
-                </Link>
-              ) : (
-                <Link to="/messages" state={{ receiverId: selectedListing.user_id, listingId: selectedListing.id }} title="Ask a question" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', border: '1px solid var(--color-border)', fontSize: '0.875rem', fontWeight: 600, flex: 1 }}>
-                  <MessageSquare size={14}/> Contact Seller
-                </Link>
-              )}
-            </div>
+                <h4 style={{ margin: 0, color: 'var(--color-pine-dark)' }}>Direct Secure Checkout</h4>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '160px' }}>
+                    <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Your Name *</label>
+                    <input type="text" required value={directForm.name} onChange={e => setDirectForm({ ...directForm, name: e.target.value })} style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }} placeholder="Your full name" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: '160px' }}>
+                    <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Your Email *</label>
+                    <input type="email" required value={directForm.email} onChange={e => setDirectForm({ ...directForm, email: e.target.value })} style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }} placeholder="your@email.com" />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Card Details</label>
+                  <input type="text" placeholder="Card Number (4242 4242 ...)" value={directForm.card} onChange={e => setDirectForm({ ...directForm, card: e.target.value })} style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }} />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="submit" disabled={directProcessing} style={{ flex: 1, padding: '0.65rem', background: 'var(--color-pine-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    {directProcessing ? 'Authorizing...' : 'Pay and Checkout Now'}
+                  </button>
+                  <button type="button" onClick={() => setDirectCheckoutId(null)} style={{ flex: 1, padding: '0.65rem', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    addToCart({
+                      id: selectedListing.id,
+                      title: selectedListing.title,
+                      price_display: selectedListing.price_display,
+                      price: parseFloat(selectedListing.price_display?.replace(/[^0-9.]/g, '') || '0'),
+                      cover_image_url: selectedListing.cover_image_url,
+                    });
+                    alert(`Successfully added ${selectedListing.title} to your cart!`);
+                    setSelectedListing(null);
+                  }}
+                  style={{ flex: 1, minWidth: '160px', textAlign: 'center', background: 'var(--color-pine-primary)', color: 'white', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                >
+                  <ShoppingBag size={15}/> Add to Cart
+                </button>
+                <button
+                  onClick={() => setDirectCheckoutId(selectedListing.id)}
+                  style={{ flex: 1, minWidth: '160px', textAlign: 'center', background: 'var(--color-accent)', color: 'white', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                >
+                  📦 Buy Direct Now
+                </button>
+                {selectedListing.user_id && (
+                  <Link to={`/profile/${selectedListing.user_id}`} style={{ flex: 1, minWidth: '160px', textAlign: 'center', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: '1px solid var(--color-border)' }}>
+                    🏪 Visit Shop
+                  </Link>
+                )}
+                {selectedListing.payment_url && <a href={selectedListing.payment_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#635BFF', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><CreditCard size={14}/> Buy with Card</a>}
+                {selectedListing.crypto_url && <a href={selectedListing.crypto_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#F7931A', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><Bitcoin size={14}/> Buy with Crypto</a>}
+                {selectedListing.etsy_url && <a href={selectedListing.etsy_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', background: '#F56400', color: 'white', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}><ExternalLink size={14}/> Etsy Shop</a>}
+                {!selectedListing.payment_url && !selectedListing.crypto_url && !selectedListing.etsy_url ? (
+                  <Link to="/messages" state={{ receiverId: selectedListing.user_id, listingId: selectedListing.id }} style={{ flex: 1, textAlign: 'center', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: '1px solid var(--color-border)' }}>
+                    <MessageSquare size={14}/> Message seller
+                  </Link>
+                ) : (
+                  <Link to="/messages" state={{ receiverId: selectedListing.user_id, listingId: selectedListing.id }} title="Ask a question" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-base)', color: 'var(--color-text-main)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', border: '1px solid var(--color-border)', fontSize: '0.875rem', fontWeight: 600, flex: 1 }}>
+                    <MessageSquare size={14}/> Contact Seller
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

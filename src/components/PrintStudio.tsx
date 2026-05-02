@@ -316,9 +316,12 @@ function PrintEditorInterface({ print, onClose, onPublished }: { print: any; onC
       geometry = new THREE.BoxGeometry(dimensions.width, dimensions.thickness, dimensions.depth);
     } else if (templateType === 'Cylinder Container') {
       geometry = new THREE.CylinderGeometry(dimensions.width / 2, dimensions.width / 2, dimensions.depth, 32);
+    } else if (templateType === 'Engraved Plate') {
+      geometry = new THREE.BoxGeometry(dimensions.width, dimensions.height, dimensions.thickness || 2);
     } else {
       geometry = new THREE.CylinderGeometry(dimensions.width / 2, dimensions.width / 2, dimensions.depth, 32);
     }
+
 
     const material = new THREE.MeshStandardMaterial({
       color: slicerParams.material === 'PETG' ? '#0ea5e9' : slicerParams.material === 'PLA' ? '#16a34a' : '#ea580c',
@@ -347,7 +350,7 @@ function PrintEditorInterface({ print, onClose, onPublished }: { print: any; onC
       material.dispose();
       geometry.dispose();
     };
-  }, [templateType, dimensions, slicerParams.material]);
+  }, [templateType, dimensions.width, dimensions.height, dimensions.depth, dimensions.thickness, slicerParams.material]);
 
   // Read draft or file_url data
   useEffect(() => {

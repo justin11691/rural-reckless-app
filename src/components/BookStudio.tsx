@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { BookOpen, PenLine, Plus, Trash2, X, Sparkles, ChevronRight, Save } from 'lucide-react';
 
@@ -49,9 +49,9 @@ export function BookStudio({ userId, onPublished }: { userId: string; onPublishe
   }
 
   // Effect to load data
-  useState(() => {
+  useEffect(() => {
     fetchMyBooks();
-  });
+  }, []);
 
   async function createBook() {
     if (!newTitle.trim() || !newPrice.trim()) return;
@@ -243,7 +243,7 @@ function EditorInterface({ book, onClose }: { book: any; onClose: () => void }) 
   const [aiPrompt, setAiPrompt] = useState('');
 
   // Parse the stored chapters inside file_url
-  useState(() => {
+  useEffect(() => {
     if (book.file_url && book.file_url.startsWith('BOOK_JSON:')) {
       try {
         const parsed: BookData = JSON.parse(book.file_url.substring(10));
@@ -254,7 +254,8 @@ function EditorInterface({ book, onClose }: { book: any; onClose: () => void }) 
     } else {
       setChapters([{ id: 'ch1', title: 'Chapter 1: Welcome', content: 'Write here...' }]);
     }
-  });
+  }, []);
+
 
   const activeChapter = chapters[activeChapterIndex] || chapters[0];
 

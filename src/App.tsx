@@ -7,12 +7,15 @@ import { Profile } from './components/Profile';
 import { Sidebar } from './components/Sidebar';
 import { Auth } from './components/Auth';
 import { Marketplace } from './components/Marketplace';
+import { MarketListingPage } from './components/MarketListingPage';
 import { Apps } from './components/Apps';
 import { Communities } from './components/Communities';
 import { GroupPage } from './components/GroupPage';
 import { Messages } from './components/Messages';
 import { DiscoverUsers } from './components/DiscoverUsers';
 import { CartModal } from './components/CartModal';
+import { SearchResults } from './components/SearchResults';
+import { TrendingSidebar } from './components/TrendingSidebar';
 import { useCart } from './lib/cart';
 import { supabase } from './lib/supabase';
 
@@ -23,9 +26,16 @@ function App() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { items } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -92,10 +102,16 @@ function App() {
           Rural &amp; Reckless
         </Link>
 
-        <div className="nav-search">
+        <form className="nav-search" onSubmit={handleSearch}>
           <Search className="search-icon" size={18} aria-hidden />
-          <input type="text" placeholder="Search Rural &amp; Reckless..." aria-label="Search" />
-        </div>
+          <input 
+            type="text" 
+            placeholder="Search Rural &amp; Reckless..." 
+            aria-label="Search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </form>
 
         <div className="nav-actions" style={{ position: 'relative' }}>
           <button className="icon-button" onClick={() => setShowCart(!showCart)} aria-label="Cart" style={{ position: 'relative' }}>
@@ -168,32 +184,7 @@ function App() {
             <>
               <div className="desktop-sidebar"><SidebarWithNav /></div>
               <Feed />
-              <aside className="sidebar right-sidebar" aria-label="Trending storefronts">
-                <div className="card">
-                  <h3 className="sidebar-heading" style={{ padding: 0, marginBottom: '1rem' }}>Trending Storefronts</h3>
-                  <div className="trending-item">
-                    <ShoppingBag size={32} style={{ color: 'var(--color-pine-light)', flexShrink: 0 }} aria-hidden />
-                    <div className="trending-content">
-                      <h5>Arthur's Woodshop</h5>
-                      <p>New handmade bowls added</p>
-                    </div>
-                  </div>
-                  <div className="trending-item">
-                    <BookOpen size={32} style={{ color: 'var(--color-wood-light)', flexShrink: 0 }} aria-hidden />
-                    <div className="trending-content">
-                      <h5>The Indie Press</h5>
-                      <p>3 new authors published</p>
-                    </div>
-                  </div>
-                  <div className="trending-item">
-                    <Users size={32} style={{ color: 'var(--color-accent)', flexShrink: 0 }} aria-hidden />
-                    <div className="trending-content">
-                      <h5>Jane's Digital Tools</h5>
-                      <p>New app available for download</p>
-                    </div>
-                  </div>
-                </div>
-              </aside>
+              <TrendingSidebar />
             </>
           } />
 
@@ -217,6 +208,10 @@ function App() {
             <PageWrapper><Marketplace /></PageWrapper>
           } />
 
+          <Route path="/market/listing/:id" element={
+            <PageWrapper><MarketListingPage /></PageWrapper>
+          } />
+
           <Route path="/users" element={
             <PageWrapper><DiscoverUsers /></PageWrapper>
           } />
@@ -227,6 +222,10 @@ function App() {
 
           <Route path="/messages" element={
             <PageWrapper><Messages /></PageWrapper>
+          } />
+
+          <Route path="/search" element={
+            <PageWrapper><SearchResults /></PageWrapper>
           } />
 
           <Route path="*" element={<Navigate to="/" replace />} />

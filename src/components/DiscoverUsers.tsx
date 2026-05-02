@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
-import { Users, Search, MessageSquare, ExternalLink, MapPin } from 'lucide-react';
+import { Users, Search, MessageSquare, ExternalLink, MapPin, ShoppingBag, Tag } from 'lucide-react';
 
 export function DiscoverUsers() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterArtForm, setFilterArtForm] = useState('All');
+  const [subTab, setSubTab] = useState<'makers' | 'storefronts'>('makers');
 
   useEffect(() => {
     fetchProfiles();
@@ -60,6 +61,22 @@ export function DiscoverUsers() {
         </div>
       </div>
 
+      {/* Sub tabs switcher */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
+        <button
+          onClick={() => setSubTab('makers')}
+          style={{ padding: '0.6rem 1.25rem', background: subTab === 'makers' ? 'var(--color-pine-primary)' : 'transparent', color: subTab === 'makers' ? 'white' : 'var(--color-text-main)', border: subTab === 'makers' ? 'none' : '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+        >
+          <Users size={16} /> Artisans & Makers
+        </button>
+        <button
+          onClick={() => setSubTab('storefronts')}
+          style={{ padding: '0.6rem 1.25rem', background: subTab === 'storefronts' ? 'var(--color-pine-primary)' : 'transparent', color: subTab === 'storefronts' ? 'white' : 'var(--color-text-main)', border: subTab === 'storefronts' ? 'none' : '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+        >
+          <ShoppingBag size={16} /> Browse Storefronts
+        </button>
+      </div>
+
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
           <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
@@ -72,20 +89,22 @@ export function DiscoverUsers() {
             style={{ width: '100%', paddingLeft: '2.5rem', margin: 0, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}
           />
         </div>
-        <select
-          className="post-input"
-          value={filterArtForm}
-          onChange={e => setFilterArtForm(e.target.value)}
-          style={{ width: '220px', padding: '0.55rem 1rem', borderRadius: 'var(--radius-md)', margin: 0, border: '1px solid var(--color-border)', background: 'var(--color-bg-base)', fontWeight: 600, color: 'var(--color-text-main)' }}
-        >
-          <option value="All">All Creative Styles</option>
-          <option value="General">General Artisan & Maker</option>
-          <option value="Pottery">Pottery & Ceramics</option>
-          <option value="Tattoo">Tattoo & Flash Artist</option>
-          <option value="Digital">Digital & 3D Print Art</option>
-          <option value="Custom Painter">Fine Art & Custom Painter</option>
-          <option value="Photography">Photography & Prints</option>
-        </select>
+        {subTab === 'makers' && (
+          <select
+            className="post-input"
+            value={filterArtForm}
+            onChange={e => setFilterArtForm(e.target.value)}
+            style={{ width: '220px', padding: '0.55rem 1rem', borderRadius: 'var(--radius-md)', margin: 0, border: '1px solid var(--color-border)', background: 'var(--color-bg-base)', fontWeight: 600, color: 'var(--color-text-main)' }}
+          >
+            <option value="All">All Creative Styles</option>
+            <option value="General">General Artisan & Maker</option>
+            <option value="Pottery">Pottery & Ceramics</option>
+            <option value="Tattoo">Tattoo & Flash Artist</option>
+            <option value="Digital">Digital & 3D Print Art</option>
+            <option value="Custom Painter">Fine Art & Custom Painter</option>
+            <option value="Photography">Photography & Prints</option>
+          </select>
+        )}
       </div>
 
       {loading ? (
@@ -97,6 +116,43 @@ export function DiscoverUsers() {
         <div className="card" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>
           <p style={{ fontSize: '1.1rem', marginBottom: '0.45rem', color: 'var(--color-pine-dark)' }}>No makers found.</p>
           <p>Try clearing your search terms or filters.</p>
+        </div>
+      ) : subTab === 'storefronts' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+          {filtered.map(p => (
+            <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', gap: '0.85rem', border: '1px solid var(--color-border)', position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <img
+                  src={p.avatar_url || '/images/avatar_maker.png'}
+                  alt={p.username || 'User'}
+                  style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--color-pine-dark)' }}>
+                    {p.store_name || `${p.full_name || p.username}'s Storefront`}
+                  </h3>
+                  <p style={{ margin: '0.15rem 0 0', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                    By {p.full_name || p.username}
+                  </p>
+                </div>
+              </div>
+
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-muted)', minHeight: '38px', lineHeight: 1.4 }}>
+                {p.tagline || 'Artisanal products & bespoke handmade goods directly from our workshop.'}
+              </p>
+
+              <div style={{ marginTop: 'auto', paddingTop: '0.85rem', display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                <Link to={`/profile/${p.id}`} style={{ flex: 1, textDecoration: 'none', background: 'var(--color-pine-primary)', color: 'white', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                  🏪 Visit Storefront
+                </Link>
+                {p.website && (
+                  <a href={p.website} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textDecoration: 'none', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', color: 'var(--color-text-main)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                    <ExternalLink size={14} /> Official Shop Website
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
