@@ -352,7 +352,12 @@ export function Profile() {
                 aria-label="Full name"
               />
             ) : (
-              <h1 style={{ margin: 0 }}>{profile?.full_name || profile?.username || 'Anonymous Maker'}</h1>
+              <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                {profile?.full_name || profile?.username || 'Anonymous Maker'}
+                <span title="Verified Artisan Maker" style={{ fontSize: '0.68rem', background: 'var(--color-accent)', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, verticalAlign: 'middle', border: '1px solid rgba(255, 255, 255, 0.25)' }}>
+                  ✓ Artisan Pro
+                </span>
+              </h1>
             )}
             {isMyProfile ? (
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

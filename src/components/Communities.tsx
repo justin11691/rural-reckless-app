@@ -330,6 +330,24 @@ export function Communities() {
         </div>
       )}
 
+      {/* Meetups Board */}
+      <div className="card" style={{ padding:'1.25rem 1.75rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
+        <h3 style={{ margin: 0, color: 'var(--color-pine-dark)', fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🤝 Upcoming Community Meetups & Workshops</h3>
+        <p style={{ marginTop: '0.25rem', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Connect offline for local plant swaps, farmers market gatherings, or hands-on classes.</p>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+          <div style={{ flex: 1, minWidth: '220px', background: '#fbf7f0', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid #efe4d3' }}>
+            <span style={{ fontSize: '0.72rem', background: 'var(--color-pine-primary)', color: 'white', padding: '0.15rem 0.45rem', borderRadius: 4, fontWeight: 700 }}>May 18</span>
+            <h5 style={{ margin: '0.35rem 0 0.1rem', color: 'var(--color-pine-dark)', fontSize: '0.9rem' }}>Spring Seedling & Plant Swap</h5>
+            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>Blue Ridge Community Center · 10:00 AM</p>
+          </div>
+          <div style={{ flex: 1, minWidth: '220px', background: '#fbf7f0', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid #efe4d3' }}>
+            <span style={{ fontSize: '0.72rem', background: 'var(--color-pine-primary)', color: 'white', padding: '0.15rem 0.45rem', borderRadius: 4, fontWeight: 700 }}>Jun 05</span>
+            <h5 style={{ margin: '0.35rem 0 0.1rem', color: 'var(--color-pine-dark)', fontSize: '0.9rem' }}>Handmade Soapmaking Class</h5>
+            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>Artisan Collective Studio · 2:30 PM</p>
+          </div>
+        </div>
+      </div>
+
       {/* Groups Grid */}
       {loading ? (
         <p style={{ color:'var(--color-text-muted)' }}>Loading groups…</p>

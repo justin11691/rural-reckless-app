@@ -20,9 +20,9 @@ export function CartModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 2000 }} onClick={onClose}>
-      <div className="card" style={{ maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: 'var(--color-bg-base)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }} onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={20}/></button>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'flex-end', zIndex: 2000 }} onClick={onClose}>
+      <div className="card" style={{ maxWidth: '420px', width: '100%', height: '100vh', overflowY: 'auto', background: 'var(--color-bg-base)', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'relative', borderRadius: 0, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={20}/></button>
 
         {success ? (
           <div style={{ textAlign: 'center', padding: '2.5rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>

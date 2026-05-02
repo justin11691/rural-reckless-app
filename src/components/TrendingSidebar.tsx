@@ -63,6 +63,25 @@ export function TrendingSidebar() {
           </div>
         )}
       </div>
+
+      <div className="card" style={{ padding: '1rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', marginTop: '1rem', background: 'linear-gradient(135deg, var(--color-bg-card), #fbf7f0)' }}>
+        <h3 className="sidebar-heading" style={{ padding: 0, marginBottom: '0.75rem', color: 'var(--color-pine-dark)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '1rem' }}>
+          🌦️ Growing Conditions
+        </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0, 0, 0, 0.03)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-md)', marginBottom: '0.5rem' }}>
+          <div>
+            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-pine-dark)' }}>72°F</span>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Zone 7b • Sunny</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ fontSize: '0.78rem', color: '#2e7d32', fontWeight: 700, background: '#e8f5e9', padding: '0.15rem 0.45rem', borderRadius: 4 }}>Good Planting</span>
+            <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>Soil Temp: 64°</div>
+          </div>
+        </div>
+        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-main)', lineHeight: 1.4 }}>
+          🌿 <strong>Tip:</strong> Great afternoon to transplant warm-season annuals or sow sunflowers. Next frost: Nov 12.
+        </div>
+      </div>
     </aside>
   );
 }

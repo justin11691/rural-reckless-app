@@ -155,6 +155,19 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
 
   return (
     <div className="feed-container">
+      {/* Maker Spotlight of the Week Banner */}
+      <div className="card" style={{ padding: '1rem 1.25rem', background: 'linear-gradient(135deg, var(--color-pine-dark), #1d2b21)', color: 'white', borderRadius: 'var(--radius-lg)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', border: '1px solid rgba(255,255,255,0.12)' }}>
+        <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }} aria-hidden>
+          🌟
+        </div>
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <h4 style={{ margin: 0, fontSize: '0.92rem', color: 'var(--color-accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Maker Spotlight of the Week</h4>
+          <p style={{ margin: '0.1rem 0 0', fontSize: '0.82rem', color: '#eaeaea', lineHeight: 1.4 }}>
+            Meet <strong>Arthur</strong> from Oregon. His hand-carved cherry wood bowls have just hit the marketplace and are stunning.
+          </p>
+        </div>
+      </div>
+
       {/* Category selector for social feed filter */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
         {(['All', 'Life Event', 'Recipe', 'Day to Day'] as const).map(c => (
