@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
-import { Users, Search, MessageSquare, ExternalLink, MapPin, ShoppingBag, Tag } from 'lucide-react';
+import { Users, Search, MessageSquare, ExternalLink, MapPin, ShoppingBag } from 'lucide-react';
 
 export function DiscoverUsers() {
   const [profiles, setProfiles] = useState<any[]>([]);

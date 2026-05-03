@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { addToCart } from '../lib/cart';
-import { ShoppingBag, ArrowLeft, MapPin, MessageSquare, CreditCard, Bitcoin, ExternalLink, Leaf } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, MessageSquare, CreditCard, Bitcoin, ExternalLink, Leaf } from 'lucide-react';
 
 export function MarketListingPage() {
   const { id } = useParams<{ id: string }>();

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ShoppingBag, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { AdSenseUnit } from './AdSenseUnit';
 
 export function TrendingSidebar() {
   const [trending, setTrending] = useState<any[]>([]);
@@ -82,6 +83,8 @@ export function TrendingSidebar() {
           🌿 <strong>Tip:</strong> Great afternoon to transplant warm-season annuals or sow sunflowers. Next frost: Nov 12.
         </div>
       </div>
+
+      <AdSenseUnit slotId="sidebar_ad_938120" format="vertical" style={{ marginTop: '1rem', minHeight: '120px' }} />
     </aside>
   );
 }

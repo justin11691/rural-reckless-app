@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu, Trash2, Send, Package, Box } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { AdSenseUnit } from './AdSenseUnit';
 
 function timeAgo(dateStr: string) {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -167,6 +168,8 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
           </p>
         </div>
       </div>
+
+      <AdSenseUnit slotId="feed_top_ad_318491" format="horizontal" style={{ marginBottom: '1.25rem' }} />
 
       {/* Category selector for social feed filter */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>

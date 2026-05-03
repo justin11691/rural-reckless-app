@@ -107,7 +107,7 @@ function ListModal({ onClose, onCreated, userId, type }: { onClose:()=>void; onC
   );
 }
 
-function ListingCard({ listing, onSelect }: { listing:any; onSelect:(l:any)=>void }) {
+function ListingCard({ listing }: { listing:any }) {
   const isSample = listing.is_sample;
   const navigate = useNavigate();
   return (
@@ -198,7 +198,7 @@ export function Marketplace() {
   async function fetchListings() {
     setLoading(true);
     setFilterCat('All'); setFilterState('All');
-    const { data } = await supabase.from('market_listings').select('*').eq('listing_type', tab).eq('is_active', true).order('created_at', { ascending:false });
+    const { data } = await supabase.from('market_listings').select('*').eq('listing_type', tab).order('created_at', { ascending:false });
     setListings(data || []);
     setLoading(false);
   }
@@ -269,7 +269,7 @@ export function Marketplace() {
         <>
           {listings.length === 0 && <p style={{ fontSize:'0.82rem', color:'var(--color-text-muted)', background:'var(--color-bg-base)', padding:'0.5rem 0.85rem', borderRadius:'var(--radius-md)', border:'1px solid var(--color-border)' }}>Showing example listings — be the first real seller!</p>}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(230px, 1fr))', gap:'1.25rem' }}>
-            {filtered.map(l=><ListingCard key={l.id} listing={l} onSelect={(item) => setSelectedListing(item)}/>)}
+            {filtered.map(l=><ListingCard key={l.id} listing={l} />)}
           </div>
           <AdSenseBanner />
         </>

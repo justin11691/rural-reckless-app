@@ -146,7 +146,7 @@ export function Auth() {
               <button 
                 type="button" 
                 className="action-btn"
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => { setEmail(''); setPassword(''); setMessage(''); setIsSignUp(!isSignUp); }}
                 style={{ display: 'inline', color: 'var(--color-pine-primary)', fontWeight: 'bold', marginLeft: '0.5rem', background: 'transparent', cursor: 'pointer', border: 'none' }}
               >
                 {isSignUp ? 'Sign In' : 'Sign Up'}

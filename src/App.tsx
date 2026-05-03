@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
-import { Bell, Search, Menu, MessageSquare, ShoppingBag, BookOpen, Users, LogOut, X, TreePine } from 'lucide-react';
+import { Bell, Search, Menu, MessageSquare, ShoppingBag, LogOut, X, TreePine } from 'lucide-react';
 import './App.css';
 import { Feed } from './components/Feed';
 import { Profile } from './components/Profile';
@@ -16,6 +16,10 @@ import { DiscoverUsers } from './components/DiscoverUsers';
 import { CartModal } from './components/CartModal';
 import { SearchResults } from './components/SearchResults';
 import { TrendingSidebar } from './components/TrendingSidebar';
+import { AboutUs } from './components/AboutUs';
+import { ContactUs } from './components/ContactUs';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { TermsAndConditions } from './components/TermsAndConditions';
 import { useCart } from './lib/cart';
 import { supabase } from './lib/supabase';
 
@@ -30,6 +34,64 @@ function App() {
   const { items } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data: recentListings } = await supabase
+        .from('market_listings')
+        .select('title')
+        .order('created_at', { ascending: false })
+        .limit(2);
+
+      const { data: recentComments } = await supabase
+        .from('post_comments')
+        .select('content')
+        .order('created_at', { ascending: false })
+        .limit(2);
+
+      const itemsList: any[] = [];
+      if (recentListings && recentListings.length > 0) {
+        recentListings.forEach(l => {
+          itemsList.push({
+            id: 'list-' + l.title,
+            icon: '🌿',
+            type: 'New Storefront Item',
+            text: `A new item "${l.title}" was listed on the market.`
+          });
+        });
+      }
+      if (recentComments && recentComments.length > 0) {
+        recentComments.forEach(c => {
+          itemsList.push({
+            id: 'comment-' + c.content,
+            icon: '💬',
+            type: 'Recent Comment',
+            text: `Someone commented: "${c.content.length > 35 ? c.content.slice(0, 35) + '...' : c.content}"`
+          });
+        });
+      }
+
+      if (itemsList.length < 3) {
+        itemsList.push({
+          id: 'def-1',
+          icon: '🌿',
+          type: 'Maker Spotlight',
+          text: 'Arthur listed new handmade wooden bowls.'
+        });
+        itemsList.push({
+          id: 'def-2',
+          icon: '📬',
+          type: 'Direct Sale Complete',
+          text: 'Maker confirmed your recent transaction.'
+        });
+      }
+
+      setNotifications(itemsList.slice(0, 5));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,24 +185,29 @@ function App() {
             )}
           </button>
           <button className="icon-button" onClick={() => navTo('messages')} aria-label="Messages"><MessageSquare size={20} /></button>
-          <button className="icon-button" onClick={() => setNotificationsOpen(!notificationsOpen)} aria-label="Notifications"><Bell size={20} /></button>
+          <button className="icon-button" onClick={() => { if (!notificationsOpen) fetchNotifications(); setNotificationsOpen(!notificationsOpen); }} aria-label="Notifications"><Bell size={20} /></button>
           {notificationsOpen && (
-            <div className="card" style={{ position: 'absolute', top: '50px', right: '40px', width: '280px', zIndex: 1000, padding: '1rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)' }}>
+            <div className="card" style={{ position: 'absolute', top: '50px', right: '40px', width: '320px', zIndex: 1000, padding: '1rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)', maxHeight: '400px', overflowY: 'auto' }}>
               <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-pine-dark)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 System & Maker Notifications
                 <button onClick={() => setNotificationsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}><X size={14} /></button>
               </h4>
               <hr style={{ margin: '0.5rem 0', borderColor: 'var(--color-border)' }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                <div style={{ fontSize: '0.82rem', padding: '0.35rem 0' }}>
-                  <strong>🌿 New Storefront Item:</strong> Arthur listed a new handmade bowl for sale.
-                </div>
-                <div style={{ fontSize: '0.82rem', padding: '0.35rem 0' }}>
-                  <strong>📬 Friend Connected:</strong> Your friend request was approved.
-                </div>
-                <div style={{ fontSize: '0.82rem', padding: '0.35rem 0' }}>
-                  <strong>🛒 Direct Sale Complete:</strong> Maker confirmed your transaction.
-                </div>
+                {notifications.length === 0 ? (
+                  <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '1rem' }}>
+                    No new notifications yet.
+                  </div>
+                ) : (
+                  notifications.map(n => (
+                    <div key={n.id} style={{ fontSize: '0.82rem', padding: '0.35rem 0', display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '1rem' }}>{n.icon}</span>
+                      <div>
+                        <strong>{n.type}:</strong> {n.text}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -226,6 +293,22 @@ function App() {
 
           <Route path="/search" element={
             <PageWrapper><SearchResults /></PageWrapper>
+          } />
+
+          <Route path="/about" element={
+            <PageWrapper><AboutUs /></PageWrapper>
+          } />
+
+          <Route path="/contact" element={
+            <PageWrapper><ContactUs /></PageWrapper>
+          } />
+
+          <Route path="/privacy" element={
+            <PageWrapper><PrivacyPolicy /></PageWrapper>
+          } />
+
+          <Route path="/terms" element={
+            <PageWrapper><TermsAndConditions /></PageWrapper>
           } />
 
           <Route path="*" element={<Navigate to="/" replace />} />

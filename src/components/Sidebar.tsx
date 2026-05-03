@@ -39,6 +39,22 @@ export function Sidebar({ activeTab, setActiveTab, avatar }: SidebarProps) {
       <a href="#" className={`nav-item ${activeTab === 'apps' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('apps'); }}>
         <ShoppingBag size={20} /> Digital Goods & Apps
       </a>
+
+      <div className="sidebar-divider"></div>
+
+      <h3 className="sidebar-heading">Legal & Info</h3>
+      <a href="#" className={`nav-item ${activeTab === 'about' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('about'); }}>
+        About Us
+      </a>
+      <a href="#" className={`nav-item ${activeTab === 'contact' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('contact'); }}>
+        Contact Us
+      </a>
+      <a href="#" className={`nav-item ${activeTab === 'privacy' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('privacy'); }}>
+        Privacy Policy
+      </a>
+      <a href="#" className={`nav-item ${activeTab === 'terms' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('terms'); }}>
+        Terms of Service
+      </a>
     </aside>
   );
 }
