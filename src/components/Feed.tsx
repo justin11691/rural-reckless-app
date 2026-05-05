@@ -375,26 +375,39 @@ function ForYouFeed({ currentUser }: { currentUser: any }) {
     // Step 4: Blend and filter with interest & location algorithm
     const blended = [...(digitalItems || []).map(i => ({ ...i, type: 'digital' })), ...(localItems || []).map(i => ({ ...i, type: 'local' }))];
 
-    blended.sort((a, b) => {
-      // 1. Proximity: Prioritize local items in the same state first
-      const aInState = a.type === 'local' && a.location_state?.toUpperCase() === userState;
-      const bInState = b.type === 'local' && b.location_state?.toUpperCase() === userState;
-      if (aInState && !bInState) return -1;
-      if (!aInState && bInState) return 1;
+    const lowercaseInterests = interests.map(i => i.toLowerCase());
+    const blendedWithSortKeys = blended.map(item => {
+      const isLocal = item.type === 'local';
+      const inState = isLocal && item.location_state?.toUpperCase() === userState;
 
-      // 2. Interests: Check category matching
-      if (interests.length > 0) {
-        const aInterest = interests.some(i => a.category?.toLowerCase().includes(i.toLowerCase()));
-        const bInterest = interests.some(i => b.category?.toLowerCase().includes(i.toLowerCase()));
-        if (aInterest && !bInterest) return -1;
-        if (!aInterest && bInterest) return 1;
+      let hasInterest = false;
+      if (lowercaseInterests.length > 0) {
+        const lowerCat = item.category?.toLowerCase() || '';
+        hasInterest = lowercaseInterests.some(i => lowerCat.includes(i));
       }
 
-      // 3. Recency: Fallback chronologically
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return {
+        item,
+        inState,
+        hasInterest,
+        time: new Date(item.created_at).getTime()
+      };
     });
 
-    setBlendedProducts(blended.slice(0, 24));
+    blendedWithSortKeys.sort((a, b) => {
+      // 1. Proximity
+      if (a.inState && !b.inState) return -1;
+      if (!a.inState && b.inState) return 1;
+
+      // 2. Interests
+      if (a.hasInterest && !b.hasInterest) return -1;
+      if (!a.hasInterest && b.hasInterest) return 1;
+
+      // 3. Recency
+      return b.time - a.time;
+    });
+
+    setBlendedProducts(blendedWithSortKeys.slice(0, 24).map(m => m.item));
     setLoading(false);
   }
 
