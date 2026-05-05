@@ -17,6 +17,8 @@ const CAT_ICONS: Record<string, React.ReactNode> = {
   'Software': <Cpu size={16} />, '3D Prints': <Box size={16} />, 'default': <ShoppingCart size={16} />,
 };
 
+const PAGE_SIZE = 10;
+
 // ─── Social Tab ───────────────────────────────────────────────────────────────
 function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; currentUserProfile: any }) {
   const [posts, setPosts] = useState<any[]>([]);
@@ -28,16 +30,40 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   const [activeCommentPost, setActiveCommentPost] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [filterSocialCat, setFilterSocialCat] = useState<'All' | 'Life Event' | 'Recipe' | 'Day to Day'>('All');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
-  useEffect(() => { fetchPosts(); }, []);
+  useEffect(() => {
+    fetchPosts(0, true);
+  }, [filterSocialCat]);
 
-  async function fetchPosts() {
+  async function fetchPosts(pageNum = 0, isInitial = false) {
     setError('');
-    const { data: postsData, error: e } = await supabase
+    setLoading(true);
+    if (isInitial) {
+      setPosts([]);
+      setPage(0);
+      setHasMore(true);
+    }
+
+    let query = supabase
       .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
+
+    if (filterSocialCat !== 'All') {
+      query = query.ilike('content', `%[#${filterSocialCat}]%`);
+    }
+
+    const { data: postsData, error: e, count } = await query;
+
     if (e) { setError('Could not load posts. Try refreshing.'); setLoading(false); return; }
+
+    if (postsData) {
+      const currentCount = (count !== null) ? count : 0;
+      setHasMore((pageNum + 1) * PAGE_SIZE < currentCount);
+    }
 
     const userIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
     let profileMap: Record<string, any> = {};
@@ -87,13 +113,19 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       });
     }
 
-    setPosts((postsData || []).map((p: any) => ({ 
+    const fetchedPosts = (postsData || []).map((p: any) => ({
       ...p, 
       profiles: profileMap[p.user_id] || null,
       like_count: likesMap[p.id]?.count || 0,
       liked_by_me: likesMap[p.id]?.me || false,
       comments: commentsMap[p.id] || []
-    })));
+    }));
+
+    if (pageNum === 0) {
+      setPosts(fetchedPosts);
+    } else {
+      setPosts(prev => [...prev, ...fetchedPosts]);
+    }
     setLoading(false);
   }
 
@@ -103,7 +135,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     // Leverage content/metadata to store category or add custom flags
     const bodyContent = postCategory !== 'General' ? `[#${postCategory}] ${content}` : content;
     const { error: e } = await supabase.from('posts').insert([{ user_id: currentUser.id, content: bodyContent }]);
-    if (!e) { setContent(''); fetchPosts(); }
+    if (!e) { setContent(''); fetchPosts(0, true); }
     else setError('Could not post. Try again.');
     setPosting(false);
   }
@@ -149,10 +181,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     await supabase.from('posts').delete().eq('id', postId);
   }
 
-  const filteredPosts = posts.filter(p => {
-    if (filterSocialCat === 'All') return true;
-    return p.content?.includes(`[#${filterSocialCat}]`);
-  });
+  const filteredPosts = posts;
 
   return (
     <div className="feed-container">
@@ -218,7 +247,9 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
           <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-pine-dark)' }}>No posts under this category yet.</p>
           <p>Be the first to share your recipes and life updates.</p>
         </div>
-      ) : filteredPosts.map(post => (
+      ) : (
+        <>
+          {filteredPosts.map(post => (
         <article key={post.id} className="card post-card">
           <div className="post-header">
             <div className="post-author">
@@ -283,6 +314,23 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
           )}
         </article>
       ))}
+          {hasMore && (
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+              <button
+                onClick={() => {
+                  const nextPage = page + 1;
+                  setPage(nextPage);
+                  fetchPosts(nextPage);
+                }}
+                disabled={loading}
+                style={{ padding: '0.6rem 1.5rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', color: 'var(--color-pine-primary)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              >
+        {loading && posts.length > 0 ? 'Loading more…' : 'Load More'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
