@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
-import { Bell, Search, Menu, MessageSquare, ShoppingBag, LogOut, X, TreePine } from 'lucide-react';
+import { Bell, Search, Menu, MessageSquare, ShoppingBag, LogOut, X, TreePine, Home } from 'lucide-react';
 import './App.css';
 import { Feed } from './components/Feed';
 import { Profile } from './components/Profile';
@@ -20,89 +20,68 @@ import { AboutUs } from './components/AboutUs';
 import { ContactUs } from './components/ContactUs';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { TermsAndConditions } from './components/TermsAndConditions';
+import { GuestExplore } from './components/GuestExplore';
 import { useCart } from './lib/cart';
 import { supabase } from './lib/supabase';
+
+import { SeedManager } from './components/SeedManager';
+import { Landing } from './components/Landing';
+
+// New Feature Components
+import { Events } from './components/Events';
+import { EventPage } from './components/EventPage';
+import { Notifications } from './components/Notifications';
+import { Favorites } from './components/Favorites';
 
 function App() {
   const [session, setSession] = useState<any>(null);
   const [userAvatar, setUserAvatar] = useState('/images/avatar_maker.png');
   const [activeTab, setActiveTab] = useState('home');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { items } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  
+  // Real notifications count state
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
-  const fetchNotifications = async () => {
-    try {
-      const { data: recentListings } = await supabase
-        .from('market_listings')
-        .select('title')
-        .order('created_at', { ascending: false })
-        .limit(2);
+  // Cookie banner state
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
 
-      const { data: recentComments } = await supabase
-        .from('post_comments')
-        .select('content')
-        .order('created_at', { ascending: false })
-        .limit(2);
-
-      const itemsList: any[] = [];
-      if (recentListings && recentListings.length > 0) {
-        recentListings.forEach(l => {
-          itemsList.push({
-            id: 'list-' + l.title,
-            icon: '🌿',
-            type: 'New Storefront Item',
-            text: `A new item "${l.title}" was listed on the market.`
-          });
-        });
-      }
-      if (recentComments && recentComments.length > 0) {
-        recentComments.forEach(c => {
-          itemsList.push({
-            id: 'comment-' + c.content,
-            icon: '💬',
-            type: 'Recent Comment',
-            text: `Someone commented: "${c.content.length > 35 ? c.content.slice(0, 35) + '...' : c.content}"`
-          });
-        });
-      }
-
-      if (itemsList.length < 3) {
-        itemsList.push({
-          id: 'def-1',
-          icon: '🌿',
-          type: 'Maker Spotlight',
-          text: 'Arthur listed new handmade wooden bowls.'
-        });
-        itemsList.push({
-          id: 'def-2',
-          icon: '📬',
-          type: 'Direct Sale Complete',
-          text: 'Maker confirmed your recent transaction.'
-        });
-      }
-
-      setNotifications(itemsList.slice(0, 5));
-    } catch (e) {
-      console.error(e);
+  useEffect(() => {
+    const consent = localStorage.getItem('cookies_accepted');
+    if (!consent) {
+      setShowCookieBanner(true);
     }
+  }, []);
+
+  const handleAcceptCookies = () => {
+    localStorage.setItem('cookies_accepted', 'true');
+    setShowCookieBanner(false);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  const fetchUnreadCount = async (userId: string) => {
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_read', false);
+      if (!error && count !== null) {
+        setUnreadNotificationsCount(count);
+      }
+    } catch (err) {
+      console.error('Error fetching unread count:', err);
+    }
   };
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
+        fetchUnreadCount(session.user.id);
         const { data } = await supabase
           .from('profiles')
           .select('avatar_url')
@@ -114,10 +93,19 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) {
+        fetchUnreadCount(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  };
 
   // Sync active tab from URL — use first path segment only
   useEffect(() => {
@@ -129,8 +117,22 @@ function App() {
   if (!session) {
     return (
       <Routes>
-        <Route path="/login" element={<Auth />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/explore" element={<GuestExplore />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/contact" element={<ContactUs />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/login" element={
+          <div className="auth-wrapper">
+            <div className="auth-hero">
+              <h1>Rural &amp; Reckless</h1>
+              <p>A marketplace for makers, crafters, and local communities.</p>
+            </div>
+            <Auth />
+          </div>
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
@@ -147,11 +149,23 @@ function App() {
   );
 
   const PageWrapper = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ display: 'flex', minHeight: 'calc(100vh - 58px)' }}>
+    <div style={{ display: 'flex', minHeight: 'calc(100vh - 58px)', width: '100%' }}>
       <div className="desktop-sidebar">
         <SidebarWithNav />
       </div>
-      {children}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1 }}>
+          {children}
+        </div>
+        <footer style={{ padding: '1rem 2rem', borderTop: '1px solid var(--color-border)', fontSize: '0.8rem', color: 'var(--color-text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-bg-card)', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <span>&copy; 2026 Rural &amp; Reckless Media LLC. All rights reserved.</span>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <Link to="/privacy" style={{ color: 'var(--color-text-muted)', textDecoration: 'none' }}>Privacy Policy</Link>
+            <span>|</span>
+            <Link to="/terms" style={{ color: 'var(--color-text-muted)', textDecoration: 'none' }}>Terms of Service</Link>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 
@@ -185,32 +199,19 @@ function App() {
             )}
           </button>
           <button className="icon-button" onClick={() => navTo('messages')} aria-label="Messages"><MessageSquare size={20} /></button>
-          <button className="icon-button" onClick={() => { if (!notificationsOpen) fetchNotifications(); setNotificationsOpen(!notificationsOpen); }} aria-label="Notifications"><Bell size={20} /></button>
-          {notificationsOpen && (
-            <div className="card" style={{ position: 'absolute', top: '50px', right: '40px', width: '320px', zIndex: 1000, padding: '1rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)', maxHeight: '400px', overflowY: 'auto' }}>
-              <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-pine-dark)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                System & Maker Notifications
-                <button onClick={() => setNotificationsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}><X size={14} /></button>
-              </h4>
-              <hr style={{ margin: '0.5rem 0', borderColor: 'var(--color-border)' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                {notifications.length === 0 ? (
-                  <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '1rem' }}>
-                    No new notifications yet.
-                  </div>
-                ) : (
-                  notifications.map(n => (
-                    <div key={n.id} style={{ fontSize: '0.82rem', padding: '0.35rem 0', display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: '1rem' }}>{n.icon}</span>
-                      <div>
-                        <strong>{n.type}:</strong> {n.text}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
+          <button
+            className="icon-button"
+            onClick={() => navTo('notifications')}
+            aria-label="Notifications"
+            style={{ position: 'relative' }}
+          >
+            <Bell size={20} />
+            {unreadNotificationsCount > 0 && (
+              <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--color-rust)', color: 'white', fontSize: '0.65rem', borderRadius: '50%', width: 15, height: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                {unreadNotificationsCount}
+              </span>
+            )}
+          </button>
           <img
             src={userAvatar}
             alt="Your profile"
@@ -295,12 +296,20 @@ function App() {
             <PageWrapper><SearchResults /></PageWrapper>
           } />
 
-          <Route path="/about" element={
-            <PageWrapper><AboutUs /></PageWrapper>
+          <Route path="/events" element={
+            <PageWrapper><Events /></PageWrapper>
           } />
 
-          <Route path="/contact" element={
-            <PageWrapper><ContactUs /></PageWrapper>
+          <Route path="/events/:id" element={
+            <PageWrapper><EventPage /></PageWrapper>
+          } />
+
+          <Route path="/notifications" element={
+            <PageWrapper><Notifications /></PageWrapper>
+          } />
+
+          <Route path="/favorites" element={
+            <PageWrapper><Favorites /></PageWrapper>
           } />
 
           <Route path="/privacy" element={
@@ -311,10 +320,43 @@ function App() {
             <PageWrapper><TermsAndConditions /></PageWrapper>
           } />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/seed-manager" element={
+            <PageWrapper><SeedManager /></PageWrapper>
+          } />
+
+          <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
         </Routes>
       </main>
       {showCart && <CartModal onClose={() => setShowCart(false)} />}
+
+      {showCookieBanner && (
+        <div className="cookie-banner" role="dialog" aria-label="Cookie notice">
+          <div className="cookie-banner-inner">
+            <p>
+              This site uses cookies for basic functionality and personalized advertising. 
+              See our <Link to="/privacy">Privacy Policy</Link> and <Link to="/terms">Terms of Service</Link> for details.
+            </p>
+            <button className="cookie-accept" onClick={handleAcceptCookies}>
+              Accept
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function NotFound() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '2rem' }}>
+      <TreePine size={64} style={{ color: 'var(--color-rust)', marginBottom: '1.5rem' }} />
+      <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem', fontFamily: 'Outfit, sans-serif' }}>404 - Lost in the Woods</h1>
+      <p style={{ margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)', maxWidth: '400px', fontSize: '0.95rem' }}>
+        The page you are looking for has either been moved, deleted, or never existed in the first place.
+      </p>
+      <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--color-pine-dark)', color: 'white', padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-sm)', textDecoration: 'none', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.85rem' }}>
+        <Home size={16} /> Return Home
+      </Link>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu, Trash2, Send, Package, Box } from 'lucide-react';
+import { ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu, Trash2, Send, Package, Box, Heart, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AdSenseUnit } from './AdSenseUnit';
 
@@ -9,6 +9,18 @@ function timeAgo(dateStr: string) {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function parseContent(text: string) {
+  if (!text) return null;
+  const parts = text.split(/(\[.*?\]\(.*?\))/g);
+  return parts.map((part, i) => {
+    const match = part.match(/\[(.*?)\]\((.*?)\)/);
+    if (match) {
+      return <a key={i} href={match[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-pine-primary)', textDecoration: 'underline', fontWeight: 600 }}>{match[1]}</a>;
+    }
+    return <span key={i}>{part}</span>;
+  });
 }
 
 const CAT_ICONS: Record<string, React.ReactNode> = {
@@ -27,9 +39,14 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   const [posting, setPosting] = useState(false);
   const [activeCommentPost, setActiveCommentPost] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
-  const [filterSocialCat, setFilterSocialCat] = useState<'All' | 'Life Event' | 'Recipe' | 'Day to Day'>('All');
+  const [filterSocialCat, setFilterSocialCat] = useState<'All' | 'Life Event' | 'Recipe' | 'Day to Day' | 'Knowledge' | 'Survival'>('All');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => { fetchPosts(); }, []);
+  // Image Upload State
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => { fetchPosts(); }, [currentUser]);
 
   async function fetchPosts() {
     setError('');
@@ -52,6 +69,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     const postIds = (postsData || []).map((p: any) => p.id);
     let likesMap: Record<string, { count: number, me: boolean }> = {};
     let commentsMap: Record<string, any[]> = {};
+    let favoritedPostIds = new Set<string>();
     
     if (postIds.length > 0) {
       const { data: likes } = await supabase
@@ -85,6 +103,16 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
         if (!commentsMap[c.post_id]) commentsMap[c.post_id] = [];
         commentsMap[c.post_id].push({ ...c, profiles: commentProfileMap[c.user_id]||null });
       });
+
+      if (currentUser) {
+        const { data: favs } = await supabase
+          .from('favorites')
+          .select('item_id')
+          .eq('user_id', currentUser.id)
+          .eq('item_type', 'post')
+          .in('item_id', postIds);
+        (favs || []).forEach(f => favoritedPostIds.add(f.item_id));
+      }
     }
 
     setPosts((postsData || []).map((p: any) => ({ 
@@ -92,24 +120,66 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       profiles: profileMap[p.user_id] || null,
       like_count: likesMap[p.id]?.count || 0,
       liked_by_me: likesMap[p.id]?.me || false,
-      comments: commentsMap[p.id] || []
+      comments: commentsMap[p.id] || [],
+      favorited_by_me: favoritedPostIds.has(p.id)
     })));
     setLoading(false);
   }
 
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    if (!currentUser) return;
+
+    setUploading(true);
+    setError('');
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('post-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(fileName);
+
+      setImageUrl(publicUrl);
+    } catch (err: any) {
+      console.error('Error uploading image:', err);
+      setError('Failed to upload image: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function submit() {
-    if (!content.trim() || !currentUser) return;
+    if ((!content.trim() && !imageUrl) || !currentUser) return;
     setPosting(true);
     // Leverage content/metadata to store category or add custom flags
     const bodyContent = postCategory !== 'General' ? `[#${postCategory}] ${content}` : content;
-    const { error: e } = await supabase.from('posts').insert([{ user_id: currentUser.id, content: bodyContent }]);
-    if (!e) { setContent(''); fetchPosts(); }
+    const { error: e } = await supabase.from('posts').insert([{ 
+      user_id: currentUser.id, 
+      content: bodyContent,
+      image_url: imageUrl || null
+    }]);
+    if (!e) { 
+      setContent(''); 
+      setImageUrl('');
+      fetchPosts(); 
+    }
     else setError('Could not post. Try again.');
     setPosting(false);
   }
 
   async function toggleLike(postId: string, currentlyLiked: boolean) {
     if (!currentUser) return;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
     setPosts(posts.map(p => {
       if (p.id === postId) {
         return { ...p, liked_by_me: !currentlyLiked, like_count: p.like_count + (currentlyLiked ? -1 : 1) };
@@ -121,6 +191,20 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
     } else {
       await supabase.from('post_likes').insert([{ post_id: postId, user_id: currentUser.id }]);
+      
+      // Notify creator (if not self)
+      if (post.user_id !== currentUser.id) {
+        const likerName = currentUserProfile?.username || 'Someone';
+        const preview = post.content ? (post.content.length > 30 ? post.content.substring(0, 30) + '...' : post.content) : 'your post';
+        await supabase.from('notifications').insert([{
+          user_id: post.user_id,
+          type: 'like',
+          title: 'New Like',
+          body: `${likerName} liked your post: "${preview}"`,
+          link: `/profile/${currentUser.id}`,
+          is_read: false
+        }]);
+      }
     }
   }
 
@@ -140,6 +224,47 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
         return p;
       }));
       setCommentText('');
+
+      // Notify creator (if not self)
+      const post = posts.find(p => p.id === postId);
+      if (post && post.user_id !== currentUser.id) {
+        const commenterName = currentUserProfile?.username || 'Someone';
+        const preview = post.content ? (post.content.length > 30 ? post.content.substring(0, 30) + '...' : post.content) : 'your post';
+        await supabase.from('notifications').insert([{
+          user_id: post.user_id,
+          type: 'comment',
+          title: 'New Comment',
+          body: `${commenterName} commented on your post: "${preview}"`,
+          link: `/profile/${currentUser.id}`,
+          is_read: false
+        }]);
+      }
+    }
+  }
+
+  async function toggleFavorite(postId: string, currentlyFavorited: boolean) {
+    if (!currentUser) return;
+    
+    setPosts(posts.map(p => {
+      if (p.id === postId) {
+        return { ...p, favorited_by_me: !currentlyFavorited };
+      }
+      return p;
+    }));
+
+    if (currentlyFavorited) {
+      await supabase.from('favorites')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('item_id', postId)
+        .eq('item_type', 'post');
+    } else {
+      await supabase.from('favorites')
+        .insert([{
+          user_id: currentUser.id,
+          item_id: postId,
+          item_type: 'post'
+        }]);
     }
   }
 
@@ -150,8 +275,12 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   }
 
   const filteredPosts = posts.filter(p => {
-    if (filterSocialCat === 'All') return true;
-    return p.content?.includes(`[#${filterSocialCat}]`);
+    const matchesCat = filterSocialCat === 'All' || p.content?.includes(`[#${filterSocialCat}]`);
+    const matchesSearch = !searchTerm || 
+      p.content?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.profiles?.username?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCat && matchesSearch;
   });
 
   return (
@@ -171,13 +300,26 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
 
       <AdSenseUnit slotId="feed_top_ad_318491" format="horizontal" style={{ marginBottom: '1.25rem' }} />
 
-      {/* Category selector for social feed filter */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        {(['All', 'Life Event', 'Recipe', 'Day to Day'] as const).map(c => (
-          <button key={c} onClick={() => setFilterSocialCat(c)} style={{ padding: '0.45rem 1rem', background: filterSocialCat === c ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: filterSocialCat === c ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
-            {c}
-          </button>
-        ))}
+      {/* Search and Category Filter */}
+      <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ position: 'relative' }}>
+          <Leaf size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+          <input 
+            type="text" 
+            placeholder="Search recipes, survival guides, or makers..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.75rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', fontSize: '0.9rem', boxSizing: 'border-box' }}
+          />
+        </div>
+        
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {(['All', 'Life Event', 'Recipe', 'Day to Day', 'Knowledge', 'Survival'] as const).map(c => (
+            <button key={c} onClick={() => setFilterSocialCat(c as any)} style={{ padding: '0.45rem 1rem', background: filterSocialCat === c ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: filterSocialCat === c ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s' }}>
+              {c}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Compose */}
@@ -188,8 +330,36 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
             value={content} onChange={e => setContent(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) submit(); }}
             aria-label="Write a post" />
-          <div className="post-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          
+          {imageUrl && (
+            <div style={{ position: 'relative', marginTop: '0.75rem', width: 'fit-content' }}>
+              <img src={imageUrl} alt="Upload preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
+              <button 
+                onClick={() => setImageUrl('')} 
+                style={{ 
+                  position: 'absolute', 
+                  top: '0.25rem', 
+                  right: '0.25rem', 
+                  background: 'rgba(0,0,0,0.6)', 
+                  border: 'none', 
+                  color: 'white', 
+                  borderRadius: '50%', 
+                  width: '20px', 
+                  height: '20px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  cursor: 'pointer', 
+                  fontSize: '0.7rem',
+                  padding: 0
+                }}
+                title="Remove image"
+              >✕</button>
+            </div>
+          )}
+
+          <div className="post-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Type:</span>
               <select value={postCategory} onChange={e => setPostCategory(e.target.value as any)} style={{ padding: '0.35rem 0.65rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'white', fontSize: '0.82rem' }}>
                 <option value="General">General Post</option>
@@ -197,8 +367,27 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
                 <option value="Recipe">Recipe</option>
                 <option value="Day to Day">Day to Day</option>
               </select>
+              
+              <label 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.25rem', 
+                  cursor: 'pointer', 
+                  padding: '0.35rem 0.65rem', 
+                  background: 'var(--color-bg-base)', 
+                  border: '1px solid var(--color-border)', 
+                  borderRadius: 'var(--radius-md)', 
+                  fontSize: '0.82rem', 
+                  fontWeight: 600,
+                  color: 'var(--color-text-main)'
+                }}
+              >
+                <ImageIcon size={14} /> {uploading ? 'Uploading...' : 'Add Image'}
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} disabled={uploading} />
+              </label>
             </div>
-            <button onClick={submit} disabled={!content.trim() || posting} style={{ padding: '0.55rem 1.25rem', background: 'var(--color-pine-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={submit} disabled={(!content.trim() && !imageUrl) || posting || uploading} style={{ padding: '0.55rem 1.25rem', background: 'var(--color-pine-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 600, cursor: 'pointer' }}>
               {posting ? 'Posting…' : 'Post'}
             </button>
           </div>
@@ -235,17 +424,29 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
             )}
           </div>
           <div className="post-content">
-            <p className="post-text">{post.content}</p>
+            <p className="post-text" style={{whiteSpace:'pre-wrap'}}>{parseContent(post.content)}</p>
             {post.image_url && <img src={post.image_url} alt="Post image" className="post-image" loading="lazy" />}
           </div>
           <div className="post-footer">
-            <button className="interaction-btn" onClick={() => toggleLike(post.id, post.liked_by_me)} style={{ color: post.liked_by_me ? 'var(--color-accent)' : 'inherit' }}>
+            <button className="interaction-btn" onClick={() => toggleLike(post.id, post.liked_by_me)} style={{ color: post.liked_by_me ? 'var(--color-accent)' : 'inherit' }} aria-label="Like post">
               <ThumbsUp size={18} fill={post.liked_by_me ? "currentColor" : "none"} /> {post.like_count ?? 0}
             </button>
-            <button className="interaction-btn" onClick={() => setActiveCommentPost(activeCommentPost === post.id ? null : post.id)}>
+            <button className="interaction-btn" onClick={() => setActiveCommentPost(activeCommentPost === post.id ? null : post.id)} aria-label="Comment on post">
               <MessageCircle size={18} /> {post.comments?.length || 0}
             </button>
-            <button className="interaction-btn"><Share2 size={18} /> Share</button>
+            {currentUser && (
+              <button className="interaction-btn" onClick={() => toggleFavorite(post.id, post.favorited_by_me)} style={{ color: post.favorited_by_me ? 'var(--color-rust)' : 'inherit' }} title={post.favorited_by_me ? "Unsave post" : "Save post"} aria-label="Save post">
+                <Heart size={18} fill={post.favorited_by_me ? "currentColor" : "none"} /> {post.favorited_by_me ? 'Saved' : 'Save'}
+              </button>
+            )}
+            <button className="interaction-btn" onClick={() => {
+              if (navigator.share) {
+                navigator.share({ title: 'Rural & Reckless Post', text: post.content, url: window.location.href });
+              } else {
+                navigator.clipboard.writeText(window.location.origin + window.location.pathname);
+                alert('Link copied to clipboard!');
+              }
+            }} aria-label="Share post"><Share2 size={18} /> Share</button>
           </div>
           
           {/* Comments Section */}
@@ -466,6 +667,11 @@ export function Feed() {
       </div>
       <div id="tab-foryou" role="tabpanel" hidden={tab !== 'foryou'}>
         {tab === 'foryou' && <ForYouFeed currentUser={currentUser} />}
+      </div>
+
+      {/* Subtle Feed Footer */}
+      <div style={{ padding: '2rem 1rem 1rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', marginTop: '1.5rem' }}>
+        <p style={{ margin: 0 }}>🌿 Rural &amp; Reckless Media LLC — Crafting community, one connection at a time.</p>
       </div>
     </div>
   );

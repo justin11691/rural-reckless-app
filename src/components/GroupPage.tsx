@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users, ArrowLeft, Lock, Send, Trash2, TrendingUp,
-  Settings, UserCheck, UserX, Mail, X
+  Settings, UserCheck, UserX, Mail, X, Share2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -10,6 +10,14 @@ const ICONS: Record<string,string> = {
   'Woodworking':'🪵','3D Printing':'🧊','Arts & Crafts':'🎨','Homesteading':'🌱',
   'Reading Club':'📖','Farming':'🌾','Music':'🎸','Writing':'✍️','General':'🏡',
   'Recipes & Cooking':'🍳','Sewing & Patterns':'🧵','Livestock & Pets':'🐄','Other':'🤠'
+};
+
+const SUB_TAGS: Record<string, string[]> = {
+  'Recipes & Cooking': ['All', 'Breakfast', 'Dinner', 'Preservation', 'Sourdough'],
+  'Sewing & Patterns': ['All', 'Knitting', 'Sewing', 'Crochet', 'Beginner'],
+  '3D Printing': ['All', 'Functional', 'Art', 'Tools', 'Settings'],
+  'Homesteading': ['All', 'Survival', 'Knowledge', 'Livestock', 'Garden'],
+  'Skills & Knowledge': ['All', 'Survival', 'Medicinal', 'Water', 'First Aid']
 };
 
 function fmt(n:number) { return n>=1000?`${(n/1000).toFixed(1)}k`:String(n); }
@@ -148,6 +156,18 @@ function ManagePanel({ group, currentUserId, onClose, onRefresh }: {
 }
 
 // ── Group Post Card ───────────────────────────────────────────────────────────
+function parseContent(text: string) {
+  if (!text) return null;
+  const parts = text.split(/(\[.*?\]\(.*?\))/g);
+  return parts.map((part, i) => {
+    const match = part.match(/\[(.*?)\]\((.*?)\)/);
+    if (match) {
+      return <a key={i} href={match[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-pine-primary)', textDecoration: 'underline', fontWeight: 600 }}>{match[1]}</a>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 function GroupPostCard({ post, currentUserId, onDelete }: { post:any; currentUserId:string|null; onDelete:(id:string)=>void }) {
   const canDelete = post.user_id === currentUserId;
   return (
@@ -164,6 +184,16 @@ function GroupPostCard({ post, currentUserId, onDelete }: { post:any; currentUse
           </p>
           <p style={{margin:0,fontSize:'0.78rem',color:'var(--color-text-muted)'}}>{timeAgo(post.created_at)}</p>
         </div>
+        <button onClick={() => {
+          if (navigator.share) {
+            navigator.share({ title: 'Rural & Reckless Post', text: post.content, url: window.location.href });
+          } else {
+            navigator.clipboard.writeText(window.location.origin + window.location.pathname);
+            alert('Link copied to clipboard!');
+          }
+        }} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--color-text-muted)',padding:'0.25rem'}} title="Share">
+          <Share2 size={16} />
+        </button>
         {canDelete && (
           <button onClick={()=>onDelete(post.id)}
             style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--color-text-muted)',padding:'0.25rem'}}
@@ -172,7 +202,7 @@ function GroupPostCard({ post, currentUserId, onDelete }: { post:any; currentUse
           </button>
         )}
       </div>
-      <p style={{margin:0,lineHeight:1.6,color:'var(--color-text-main)',whiteSpace:'pre-wrap'}}>{post.content}</p>
+      <p style={{margin:0,lineHeight:1.6,color:'var(--color-text-main)',whiteSpace:'pre-wrap'}}>{parseContent(post.content)}</p>
       {post.image_url && (
         <img src={post.image_url} alt="Post attachment" style={{width:'100%',borderRadius:'var(--radius-md)',maxHeight:320,objectFit:'cover'}}/>
       )}
@@ -194,6 +224,7 @@ export function GroupPage() {
   const [postText, setPostText]       = useState('');
   const [posting, setPosting]         = useState(false);
   const [managing, setManaging]       = useState(false);
+  const [activeSubTag, setActiveSubTag] = useState('All');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data:{ session } }) => {
@@ -389,6 +420,31 @@ export function GroupPage() {
         {group.description && (
           <p style={{margin:'1.25rem 0 0',opacity:0.85,lineHeight:1.6,fontSize:'0.95rem'}}>{group.description}</p>
         )}
+
+        {/* Sub-Category Filter Chips */}
+        {SUB_TAGS[group.category] && (
+          <div style={{display:'flex',gap:'0.5rem',marginTop:'1.5rem',flexWrap:'wrap'}}>
+            {SUB_TAGS[group.category].map(tag => (
+              <button 
+                key={tag} 
+                onClick={() => setActiveSubTag(tag)}
+                style={{
+                  padding: '0.4rem 1rem',
+                  borderRadius: 'var(--radius-full)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  background: activeSubTag === tag ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)',
+                  color: 'white',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {tag === 'All' ? '🌐 All Posts' : `#${tag}`}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 260px',gap:'1.5rem',alignItems:'start'}} className="group-layout">
@@ -430,16 +486,22 @@ export function GroupPage() {
 
           {/* Posts */}
           {(isMember || isOwner || group.is_public) ? (
-            posts.length > 0 ? (
-              posts.map(p=>(
-                <GroupPostCard key={p.id} post={p} currentUserId={currentUser?.id??null} onDelete={deletePost}/>
-              ))
-            ) : (
-              <div className="card" style={{textAlign:'center',padding:'2.5rem 1rem',color:'var(--color-text-muted)'}}>
-                <p style={{fontSize:'1.05rem',marginBottom:'0.5rem',color:'var(--color-pine-dark)'}}>No posts yet!</p>
-                <p>{canPost ? 'Be the first to share something with the group.' : 'Join the group to see posts.'}</p>
-              </div>
-            )
+            (() => {
+              const filtered = posts.filter(p => 
+                activeSubTag === 'All' || 
+                p.content?.toLowerCase().includes(activeSubTag.toLowerCase())
+              );
+              return filtered.length > 0 ? (
+                filtered.map(p=>(
+                  <GroupPostCard key={p.id} post={p} currentUserId={currentUser?.id??null} onDelete={deletePost}/>
+                ))
+              ) : (
+                <div className="card" style={{textAlign:'center',padding:'2.5rem 1rem',color:'var(--color-text-muted)'}}>
+                  <p style={{fontSize:'1.05rem',marginBottom:'0.5rem',color:'var(--color-pine-dark)'}}>No posts matching #{activeSubTag}</p>
+                  <p>Check back later or share your own!</p>
+                </div>
+              );
+            })()
           ) : (
             <div className="card" style={{textAlign:'center',padding:'2rem',color:'var(--color-text-muted)'}}>
               <Lock size={24} style={{marginBottom:'0.75rem',color:'var(--color-pine-primary)'}}/><br/>

@@ -39,6 +39,13 @@ export function Profile() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+
+  // Follow system state
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   const [profileTheme, setProfileTheme] = useState({
     bgColor: '#1E2923',
@@ -78,6 +85,32 @@ export function Profile() {
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     
     setMyListings(combined);
+
+    // Fetch follower/following counts
+    const { count: followers } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', targetUserId);
+    setFollowerCount(followers || 0);
+
+    const { count: following } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', targetUserId);
+    setFollowingCount(following || 0);
+
+    // Check if following
+    if (session?.user && targetUserId !== session.user.id) {
+      const { data: followData } = await supabase
+        .from('follows')
+        .select('id')
+        .eq('follower_id', session.user.id)
+        .eq('following_id', targetUserId)
+        .maybeSingle();
+      setIsFollowing(!!followData);
+    } else {
+      setIsFollowing(false);
+    }
 
     if (data) {
       setProfile(data);
@@ -261,6 +294,69 @@ export function Profile() {
     }
   }
 
+  async function handleBannerUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    try {
+      setUploadingBanner(true);
+      if (!event.target.files || event.target.files.length === 0) return;
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `banners/${profile.id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('post-images').upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(filePath);
+      await supabase.from('profiles').update({ theme_banner_url: publicUrl }).eq('id', profile.id);
+      setProfileTheme({ ...profileTheme, bannerImg: `url(${publicUrl})` });
+      setProfile({ ...profile, theme_banner_url: publicUrl });
+    } catch (err) {
+      console.error('Banner upload error:', err);
+      alert('Upload failed. Check storage bucket config.');
+    } finally {
+      setUploadingBanner(false);
+    }
+  }
+
+  async function handleFollowToggle() {
+    if (!currentUser || !profile?.id) return;
+    try {
+      if (isFollowing) {
+        // Unfollow
+        const { error } = await supabase
+          .from('follows')
+          .delete()
+          .eq('follower_id', currentUser.id)
+          .eq('following_id', profile.id);
+        if (error) throw error;
+        setIsFollowing(false);
+        setFollowerCount(prev => Math.max(0, prev - 1));
+      } else {
+        // Follow
+        const { error } = await supabase
+          .from('follows')
+          .insert({
+            follower_id: currentUser.id,
+            following_id: profile.id
+          });
+        if (error) throw error;
+
+        // Create notification
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: profile.id,
+            type: 'follow',
+            title: 'New Follower',
+            body: `${currentUser.email?.split('@')[0]} started following you.`,
+            link: `/profile/${currentUser.id}`
+          });
+
+        setIsFollowing(true);
+        setFollowerCount(prev => prev + 1);
+      }
+    } catch (err) {
+      console.error('Error toggling follow:', err);
+    }
+  }
+
   function renderMusicPlayer() {
     if (!profileFormData.music_url) {
       return (
@@ -313,8 +409,17 @@ export function Profile() {
 
       {/* Banner */}
       <div className="profile-banner" style={{ backgroundImage: profileTheme.bannerImg }}>
-        {isEditingTheme && isMyProfile && (
-          <button className="edit-banner-btn"><Palette size={16} aria-hidden /> Edit Banner</button>
+        {isMyProfile && (isEditingTheme || isEditingProfile) && (
+          <>
+            <button 
+              onClick={() => bannerInputRef.current?.click()} 
+              className="edit-banner-btn" 
+              style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid white', color: 'white', cursor: 'pointer', padding: '0.4rem 0.85rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.4rem', borderStyle: 'solid' }}
+            >
+              <Camera size={14} aria-hidden /> {uploadingBanner ? 'Uploading...' : 'Change Banner'}
+            </button>
+            <input type="file" ref={bannerInputRef} onChange={handleBannerUpload} accept="image/*" style={{ display: 'none' }} aria-hidden />
+          </>
         )}
       </div>
 
@@ -372,8 +477,13 @@ export function Profile() {
               </div>
             ) : (
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button className="follow-btn" onClick={() => alert('Connected!')} aria-label="Follow this user" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'var(--color-accent)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
-                  <UserPlus size={15} aria-hidden /> Connect / Follow
+                <button 
+                  className="follow-btn" 
+                  onClick={handleFollowToggle} 
+                  aria-label={isFollowing ? "Unfollow this user" : "Follow this user"} 
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: isFollowing ? 'var(--color-pine-primary)' : 'var(--color-accent)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  <UserPlus size={15} aria-hidden /> {isFollowing ? 'Following' : 'Connect / Follow'}
                 </button>
                 <Link to="/messages" state={{ receiverId: profile?.id }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
                   <MessageSquare size={15} aria-hidden /> Message
@@ -461,9 +571,11 @@ export function Profile() {
               <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{profileFormData.about_me || "This maker hasn't written an about me yet!"}</p>
             )}
 
-            <div className="profile-stats">
+            <div className="profile-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '1rem' }}>
               <div className="stat"><strong>{myListings.length}</strong> Items Listed</div>
               <div className="stat"><strong>{profile?.location_state || 'Online'}</strong> Region</div>
+              <div className="stat"><strong>{followerCount}</strong> Followers</div>
+              <div className="stat"><strong>{followingCount}</strong> Following</div>
             </div>
 
             {isEditingProfile ? (

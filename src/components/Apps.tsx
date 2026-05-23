@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Cpu, BookOpen, PenLine, Plus, X, CreditCard, Bitcoin, ChevronDown, ChevronUp, ExternalLink, ShoppingCart, MessageSquare, Book, Box } from 'lucide-react';
+import { Search, Cpu, BookOpen, PenLine, Plus, X, CreditCard, Bitcoin, ChevronDown, ChevronUp, ExternalLink, ShoppingCart, MessageSquare, Book, Box, Heart } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { addToCart } from '../lib/cart';
@@ -68,13 +68,47 @@ function HowToGetPaid() {
   );
 }
 
-function ProductCard({ product, onReadClick, onViewPrintClick }: { product: any; onReadClick: (p: any) => void; onViewPrintClick: (p: any) => void }) {
+function ProductCard({ product, onReadClick, onViewPrintClick, currentUser, isFavorited, onToggleFavorite }: { product: any; onReadClick: (p: any) => void; onViewPrintClick: (p: any) => void; currentUser: any; isFavorited: boolean; onToggleFavorite: (id: string, currentlyFav: boolean) => void }) {
   const isFree = product.price_display?.toLowerCase() === 'free';
   const isDirectBook = product.file_url?.startsWith('BOOK_JSON:') || product.category === 'E-Book';
   const isDirectPrint = product.file_url?.startsWith('PRINT_JSON:') || product.category === 'Design Files';
+  const isSample = product.owner_id === 'sample';
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      
+      {/* Heart/Favorite Button */}
+      {currentUser && !isSample && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(product.id, isFavorited);
+          }}
+          style={{
+            position: 'absolute',
+            top: '0.5rem',
+            right: '0.5rem',
+            background: 'rgba(255, 255, 255, 0.9)',
+            border: 'none',
+            color: isFavorited ? 'var(--color-rust)' : 'var(--color-text-muted)',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 10,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            padding: 0
+          }}
+          title={isFavorited ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={isFavorited ? "Remove from wishlist" : "Add to wishlist"}
+        >
+          <Heart size={16} fill={isFavorited ? "currentColor" : "none"} />
+        </button>
+      )}
+
       {product.cover_image_url ? (
         <img src={product.cover_image_url} alt={product.title} style={{ width: '100%', height: '160px', objectFit: 'cover' }} loading="lazy" />
       ) : (
@@ -264,6 +298,7 @@ export function Apps() {
   const [filterCat, setFilterCat] = useState('All');
   const [showList, setShowList] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
 
   // Tabs management
   const [activeTab, setActiveTab] = useState<'products' | 'studio' | 'prints'>('products');
@@ -271,9 +306,55 @@ export function Apps() {
   const [viewingPrint, setViewingPrint] = useState<any | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setCurrentUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        fetchFavorites(session.user.id);
+      }
+    });
     fetchProducts();
   }, []);
+
+  async function fetchFavorites(userId: string) {
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('item_id')
+      .eq('user_id', userId)
+      .eq('item_type', 'digital_product');
+    if (!error && data) {
+      setFavoritedIds(new Set(data.map(f => f.item_id)));
+    }
+  }
+
+  async function toggleFavorite(productId: string, currentlyFav: boolean) {
+    if (!currentUser) return;
+    
+    // Update local state first (optimistic update)
+    const newFavs = new Set(favoritedIds);
+    if (currentlyFav) {
+      newFavs.delete(productId);
+    } else {
+      newFavs.add(productId);
+    }
+    setFavoritedIds(newFavs);
+
+    if (currentlyFav) {
+      await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('item_id', productId)
+        .eq('item_type', 'digital_product');
+    } else {
+      await supabase
+        .from('favorites')
+        .insert([{
+          user_id: currentUser.id,
+          item_id: productId,
+          item_type: 'digital_product'
+        }]);
+    }
+  }
 
   async function fetchProducts() {
     setLoading(true);
@@ -376,6 +457,9 @@ export function Apps() {
                   product={p}
                   onReadClick={(p) => setReadingBook(p)}
                   onViewPrintClick={(p) => setViewingPrint(p)}
+                  currentUser={currentUser}
+                  isFavorited={favoritedIds.has(p.id)}
+                  onToggleFavorite={toggleFavorite}
                 />
               ))}
             </div>

@@ -1,4 +1,4 @@
-import { Home, Users, ShoppingBag, MessageSquare } from 'lucide-react';
+import { Home, Users, ShoppingBag, MessageSquare, Calendar, Heart, Bell } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -12,48 +12,40 @@ export function Sidebar({ activeTab, setActiveTab, avatar }: SidebarProps) {
       <a href="#" className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('home'); }}>
         <Home size={20} /> The Feed
       </a>
-      <a href="#" className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }}>
-        <img src={avatar} alt="Profile" className="avatar-small" style={{width: 20, height: 20}} /> 
-        My Profile
+      
+      <a href="#" className={`nav-item ${activeTab === 'market' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('market'); }}>
+        <ShoppingBag size={20} /> Marketplace
       </a>
+
       <a href="#" className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('users'); }}>
-        <Users size={20} /> Discover Users
+        <Users size={20} /> Creators
       </a>
+
+      <a href="#" className={`nav-item ${activeTab === 'communities' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('communities'); }}>
+        <Users size={20} /> Communities
+      </a>
+
+      <a href="#" className={`nav-item ${activeTab === 'events' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('events'); }}>
+        <Calendar size={20} /> Events
+      </a>
+
       <a href="#" className={`nav-item ${activeTab === 'messages' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('messages'); }}>
         <MessageSquare size={20} /> Messages
       </a>
-      
-      <div className="sidebar-divider"></div>
-      
-      <h3 className="sidebar-heading">Communities</h3>
-      <a href="#" className={`nav-item ${activeTab === 'communities' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('communities'); }}>
-        <Users size={20} /> Communities Hub
-      </a>
-      
-      <div className="sidebar-divider"></div>
 
-      <h3 className="sidebar-heading">Marketplace</h3>
-      <a href="#" className={`nav-item ${activeTab === 'market' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('market'); }}>
-        <ShoppingBag size={20} /> Farmers Market
+      <a href="#" className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('notifications'); }}>
+        <Bell size={20} /> Notifications
       </a>
-      <a href="#" className={`nav-item ${activeTab === 'apps' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('apps'); }}>
-        <ShoppingBag size={20} /> Digital Goods & Apps
+
+      <a href="#" className={`nav-item ${activeTab === 'favorites' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('favorites'); }}>
+        <Heart size={20} /> Favorites
       </a>
 
       <div className="sidebar-divider"></div>
 
-      <h3 className="sidebar-heading">Legal & Info</h3>
-      <a href="#" className={`nav-item ${activeTab === 'about' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('about'); }}>
-        About Us
-      </a>
-      <a href="#" className={`nav-item ${activeTab === 'contact' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('contact'); }}>
-        Contact Us
-      </a>
-      <a href="#" className={`nav-item ${activeTab === 'privacy' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('privacy'); }}>
-        Privacy Policy
-      </a>
-      <a href="#" className={`nav-item ${activeTab === 'terms' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('terms'); }}>
-        Terms of Service
+      <a href="#" className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }}>
+        <img src={avatar || '/images/avatar_maker.png'} alt="Profile" className="avatar-small" style={{ width: 20, height: 20, borderRadius: '50%' }} /> 
+        My Profile
       </a>
     </aside>
   );

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Search, MapPin, Plus, X, CreditCard, Bitcoin, Leaf, Tag, Package, MessageSquare, ExternalLink } from 'lucide-react';
+import { ShoppingBag, Search, MapPin, Plus, X, CreditCard, Bitcoin, Leaf, Tag, Package, MessageSquare, ExternalLink, Heart } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 import { addToCart } from '../lib/cart';
 
-const FARM_CATEGORIES = ['Woodworking','Pottery & Ceramics','Textiles & Quilts','Candles & Soaps','Jewelry','Painting & Prints','Farm & Garden','Baked Goods','3D Prints','Leather Goods','Metalwork','Other Handmade'];
+const FARM_CATEGORIES = ['Woodworking','Pottery & Ceramics','Textiles & Quilts','Knitting Patterns','Sewing Patterns','Candles & Soaps','Jewelry','Painting & Prints','Farm & Garden','Baked Goods','3D Prints','Leather Goods','Metalwork','Other Handmade'];
 const RUMMAGE_CATEGORIES = ['Furniture','Tools','Clothing','Electronics','Books & Media','Toys & Games','Kitchen','Outdoor & Garden','Farm Equipment','Sporting Goods','Baby & Kids','Other'];
 const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 const CONDITIONS = ['New','Like New','Good','Fair','Parts Only'];
@@ -107,11 +107,44 @@ function ListModal({ onClose, onCreated, userId, type }: { onClose:()=>void; onC
   );
 }
 
-function ListingCard({ listing }: { listing:any }) {
+function ListingCard({ listing, currentUser, isFavorited, onToggleFavorite }: { listing:any; currentUser:any; isFavorited:boolean; onToggleFavorite:(id:string, currentlyFav:boolean)=>void }) {
   const isSample = listing.is_sample;
   const navigate = useNavigate();
   return (
-    <div className="card" onClick={() => navigate(`/market/listing/${listing.id}`)} style={{ padding:0, overflow:'hidden', display:'flex', flexDirection:'column', cursor:'pointer' }}>
+    <div className="card" onClick={() => navigate(`/market/listing/${listing.id}`)} style={{ padding:0, overflow:'hidden', display:'flex', flexDirection:'column', cursor:'pointer', position:'relative' }}>
+      
+      {/* Heart/Favorite Button */}
+      {currentUser && !isSample && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(listing.id, isFavorited);
+          }}
+          style={{
+            position: 'absolute',
+            top: '0.5rem',
+            right: '0.5rem',
+            background: 'rgba(255, 255, 255, 0.9)',
+            border: 'none',
+            color: isFavorited ? 'var(--color-rust)' : 'var(--color-text-muted)',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 10,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            padding: 0
+          }}
+          title={isFavorited ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={isFavorited ? "Remove from wishlist" : "Add to wishlist"}
+        >
+          <Heart size={16} fill={isFavorited ? "currentColor" : "none"} />
+        </button>
+      )}
+
       {listing.cover_image_url
         ? <img src={listing.cover_image_url} alt={listing.title} style={{ width:'100%', height:170, objectFit:'cover' }} loading="lazy"/>
         : <div style={{ height:80, background:'linear-gradient(135deg, var(--color-pine-dark), var(--color-pine-light))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'2rem' }}>🌿</div>
@@ -188,10 +221,57 @@ export function Marketplace() {
   const [directCheckoutId, setDirectCheckoutId] = useState<string | null>(null);
   const [directForm, setDirectForm] = useState({ name: '', email: '', card: '' });
   const [directProcessing, setDirectProcessing] = useState(false);
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data:{session} }) => setCurrentUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data:{session} }) => {
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        fetchFavorites(session.user.id);
+      }
+    });
   }, []);
+
+  async function fetchFavorites(userId: string) {
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('item_id')
+      .eq('user_id', userId)
+      .eq('item_type', 'market_listing');
+    if (!error && data) {
+      setFavoritedIds(new Set(data.map(f => f.item_id)));
+    }
+  }
+
+  async function toggleFavorite(listingId: string, currentlyFav: boolean) {
+    if (!currentUser) return;
+    
+    // Update local state first (optimistic update)
+    const newFavs = new Set(favoritedIds);
+    if (currentlyFav) {
+      newFavs.delete(listingId);
+    } else {
+      newFavs.add(listingId);
+    }
+    setFavoritedIds(newFavs);
+
+    if (currentlyFav) {
+      await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('item_id', listingId)
+        .eq('item_type', 'market_listing');
+    } else {
+      await supabase
+        .from('favorites')
+        .insert([{
+          user_id: currentUser.id,
+          item_id: listingId,
+          item_type: 'market_listing'
+        }]);
+    }
+  }
 
   useEffect(() => { fetchListings(); }, [tab]);
 
@@ -269,7 +349,7 @@ export function Marketplace() {
         <>
           {listings.length === 0 && <p style={{ fontSize:'0.82rem', color:'var(--color-text-muted)', background:'var(--color-bg-base)', padding:'0.5rem 0.85rem', borderRadius:'var(--radius-md)', border:'1px solid var(--color-border)' }}>Showing example listings — be the first real seller!</p>}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(230px, 1fr))', gap:'1.25rem' }}>
-            {filtered.map(l=><ListingCard key={l.id} listing={l} />)}
+            {filtered.map(l=><ListingCard key={l.id} listing={l} currentUser={currentUser} isFavorited={favoritedIds.has(l.id)} onToggleFavorite={toggleFavorite} />)}
           </div>
           <AdSenseBanner />
         </>
