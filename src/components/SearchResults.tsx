@@ -36,6 +36,7 @@ export function SearchResults() {
       const { data: postsData, error: postsErr } = await supabase
         .from('posts')
         .select('id, content, created_at, user_id')
+        .not('user_id', 'is', null)
         .ilike('content', `%${query}%`)
         .limit(10);
 

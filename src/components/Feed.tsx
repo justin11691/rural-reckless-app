@@ -67,6 +67,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       .from('posts')
       .select('*', { count: 'exact' })
       .is('group_id', null)
+      .not('user_id', 'is', null)
       .order('created_at', { ascending: false })
       .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
 
