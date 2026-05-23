@@ -35,6 +35,7 @@ import { Favorites } from './components/Favorites';
 
 function App() {
   const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [userAvatar, setUserAvatar] = useState('/images/avatar_maker.png');
   const [activeTab, setActiveTab] = useState('home');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -89,6 +90,7 @@ function App() {
           .single();
         if (data?.avatar_url) setUserAvatar(data.avatar_url);
       }
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -96,10 +98,32 @@ function App() {
       if (session) {
         fetchUnreadCount(session.user.id);
       }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+
+    // Set up real-time listener for new notifications
+    const channel = supabase
+      .channel('navbar-notifications')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${session.user.id}`
+      }, () => {
+        fetchUnreadCount(session.user.id);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +137,26 @@ function App() {
     setActiveTab(segment);
     setMobileNavOpen(false); // close nav on route change
   }, [location]);
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: 'var(--color-bg, #1a2f23)',
+        color: 'var(--color-text, #fcfcfc)',
+        fontFamily: 'Outfit, sans-serif'
+      }}>
+        <TreePine size={64} style={{ color: 'var(--color-pine-light, #2e7d32)', marginBottom: '1.5rem', animation: 'pulse 2s infinite' }} />
+        <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-muted, #94a3b8)' }}>
+          Loading your woodland retreat...
+        </div>
+      </div>
+    );
+  }
 
   if (!session) {
     return (
@@ -323,6 +367,9 @@ function App() {
           <Route path="/seed-manager" element={
             <PageWrapper><SeedManager /></PageWrapper>
           } />
+
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/explore" element={<Navigate to="/" replace />} />
 
           <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
         </Routes>

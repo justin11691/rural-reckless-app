@@ -790,3 +790,14 @@
   background-color: var(--color-pine-primary);
   border: 2px solid white !important;
 }
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.08);
+  }
+}

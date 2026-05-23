@@ -53,6 +53,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     const { data: postsData, error: e } = await supabase
       .from('posts')
       .select('*')
+      .is('group_id', null)
       .order('created_at', { ascending: false });
     if (e) { setError('Could not load posts. Try refreshing.'); setLoading(false); return; }
 

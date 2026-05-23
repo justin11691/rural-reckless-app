@@ -17,14 +17,30 @@ export function Notifications() {
   }, []);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchNotifications();
-    }
+    if (!currentUser) return;
+
+    fetchNotifications();
+
+    const channel = supabase
+      .channel('notifications-page')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${currentUser.id}`
+      }, () => {
+        fetchNotifications(true);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentUser]);
 
-  async function fetchNotifications() {
+  async function fetchNotifications(silent = false) {
     if (!currentUser) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('notifications')

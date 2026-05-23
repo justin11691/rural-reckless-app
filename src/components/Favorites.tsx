@@ -242,7 +242,9 @@ export function Favorites() {
               <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', flexGrow: 1, gap: '0.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
                   <h3 style={{ margin: 0, fontSize: '1rem', fontFamily: 'Outfit, sans-serif', color: 'var(--color-pine-dark)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {item.title}
+                    {activeTab === 'post' 
+                      ? `Post by ${item.profiles?.full_name || item.profiles?.username || 'Anonymous'}` 
+                      : item.title}
                   </h3>
                   
                   {activeTab !== 'post' && (

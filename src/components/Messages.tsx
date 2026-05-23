@@ -33,6 +33,64 @@ export function Messages() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Listen to new messages where current user is receiver
+    const channelList = supabase
+      .channel('conversations-list')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${currentUser.id}`
+      }, () => {
+        loadConversations(currentUser.id);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channelList);
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || !activeChat) return;
+
+    // Listen to new messages in the active chat thread
+    const channelThread = supabase
+      .channel('messages-thread')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      }, (payload) => {
+        const newMsg = payload.new;
+        const isFromActive = newMsg.sender_id === activeChat.user.id && newMsg.receiver_id === currentUser.id;
+        const isToActive = newMsg.sender_id === currentUser.id && newMsg.receiver_id === activeChat.user.id;
+
+        if (isFromActive || isToActive) {
+          setMessages(prev => {
+            // Avoid duplicate if it was already appended optimistically
+            if (prev.some(m => m.id === newMsg.id || (m.id.startsWith('temp-') && m.content === newMsg.content))) {
+              return prev.map(m => m.content === newMsg.content && m.id.startsWith('temp-') ? newMsg : m);
+            }
+            return [...prev, newMsg];
+          });
+
+          if (isFromActive) {
+            // Mark message as read
+            supabase.from('messages').update({ is_read: true }).eq('id', newMsg.id).then();
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channelThread);
+    };
+  }, [currentUser, activeChat]);
+
   async function loadConversations(userId: string) {
     // To get conversations, we get all messages where user is sender or receiver
     const { data: msgs, error } = await supabase

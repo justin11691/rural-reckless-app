@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Search, MapPin, Plus, X, CreditCard, Bitcoin, Leaf, Tag, Package, MessageSquare, ExternalLink, Heart } from 'lucide-react';
+import { ShoppingBag, Search, MapPin, Plus, X, CreditCard, Bitcoin, Leaf, Tag, Package, MessageSquare, ExternalLink, Heart, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 import { addToCart } from '../lib/cart';
@@ -35,7 +35,37 @@ function ListModal({ onClose, onCreated, userId, type }: { onClose:()=>void; onC
   const isFarm = type === 'farmers_market';
   const [form, setForm] = useState({ title:'', description:'', category: isFarm ? 'Woodworking' : 'Furniture', price_display:'', cover_image_url:'', payment_url:'', crypto_url:'', etsy_url:'', condition:'Good', location_city:'', location_state:'' });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
   const S = { width:'100%', padding:'0.6rem 1rem', border:'1px solid var(--color-border)', borderRadius:'var(--radius-md)', fontFamily:'inherit', fontSize:'0.95rem', background:'#fcfcfc', margin:0 };
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setUploading(true);
+    setError('');
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+
+      setForm(prev => ({ ...prev, cover_image_url: publicUrl }));
+    } catch (err: any) {
+      console.error('Error uploading product image:', err);
+      setError('Failed to upload image: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function save() {
     if (!form.title.trim() || !form.price_display.trim()) return;
@@ -91,7 +121,59 @@ function ListModal({ onClose, onCreated, userId, type }: { onClose:()=>void; onC
               </select>
             </Field>
           </div>
-          <Field label="Photo URL" hint="Optional — direct image link"><input style={S} type="url" value={form.cover_image_url} onChange={e=>setForm({...form,cover_image_url:e.target.value})} placeholder="https://..."/></Field>
+          <Field label="Photo" hint="Upload a photo of your item (stored securely)">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '0.5rem', 
+                  cursor: 'pointer', 
+                  padding: '0.6rem 1rem', 
+                  background: 'var(--color-bg-base)', 
+                  border: '1px solid var(--color-border)', 
+                  borderRadius: 'var(--radius-md)', 
+                  fontSize: '0.95rem', 
+                  fontWeight: 600,
+                  color: 'var(--color-text-main)',
+                  textAlign: 'center'
+                }}
+              >
+                <ImageIcon size={16} /> {uploading ? 'Uploading...' : 'Choose Image'}
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} disabled={uploading} />
+              </label>
+              {form.cover_image_url && (
+                <div style={{ position: 'relative', marginTop: '0.5rem', width: 'fit-content' }}>
+                  <img src={form.cover_image_url} alt="Listing preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
+                  <button 
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, cover_image_url: '' }))} 
+                    style={{ 
+                      position: 'absolute', 
+                      top: '0.25rem', 
+                      right: '0.25rem', 
+                      background: 'rgba(0,0,0,0.6)', 
+                      border: 'none', 
+                      color: 'white', 
+                      borderRadius: '50%', 
+                      width: '20px', 
+                      height: '20px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      cursor: 'pointer', 
+                      fontSize: '0.7rem',
+                      padding: 0,
+                      minHeight: 'auto'
+                    }}
+                    title="Remove image"
+                  >✕</button>
+                </div>
+              )}
+              {error && <p style={{ color: 'var(--color-accent)', fontSize: '0.8rem', margin: 0 }}>{error}</p>}
+            </div>
+          </Field>
           <div style={{ background:'var(--color-bg-base)', padding:'0.85rem 1rem', borderRadius:'var(--radius-md)', fontSize:'0.82rem', color:'var(--color-text-muted)' }}>
             💳 Payments go directly to you. Paste your Stripe, PayPal, or Etsy link below.
           </div>

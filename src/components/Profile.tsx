@@ -280,7 +280,7 @@ export function Profile() {
       if (!event.target.files || event.target.files.length === 0) return;
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const filePath = `${profile.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${profile.id}/${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
@@ -300,7 +300,7 @@ export function Profile() {
       if (!event.target.files || event.target.files.length === 0) return;
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const filePath = `banners/${profile.id}/${Date.now()}.${fileExt}`;
+      const filePath = `${profile.id}/banners/${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage.from('post-images').upload(filePath, file);
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(filePath);
