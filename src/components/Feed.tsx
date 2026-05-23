@@ -29,6 +29,8 @@ const CAT_ICONS: Record<string, React.ReactNode> = {
   'Software': <Cpu size={16} />, '3D Prints': <Box size={16} />, 'default': <ShoppingCart size={16} />,
 };
 
+const PAGE_SIZE = 10;
+
 // ─── Social Tab ───────────────────────────────────────────────────────────────
 function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; currentUserProfile: any }) {
   const [posts, setPosts] = useState<any[]>([]);
@@ -41,21 +43,44 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   const [commentText, setCommentText] = useState('');
   const [filterSocialCat, setFilterSocialCat] = useState<'All' | 'Life Event' | 'Recipe' | 'Day to Day' | 'Knowledge' | 'Survival'>('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   // Image Upload State
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => { fetchPosts(); }, [currentUser]);
+  useEffect(() => {
+    fetchPosts(0, true);
+  }, [currentUser, filterSocialCat]);
 
-  async function fetchPosts() {
+  async function fetchPosts(pageNum = 0, isInitial = false) {
     setError('');
-    const { data: postsData, error: e } = await supabase
+    setLoading(true);
+    if (isInitial) {
+      setPosts([]);
+      setPage(0);
+      setHasMore(true);
+    }
+
+    let query = supabase
       .from('posts')
-      .select('*')
+      .select('*', { count: 'exact' })
       .is('group_id', null)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
+
+    if (filterSocialCat !== 'All') {
+      query = query.ilike('content', `%[#${filterSocialCat}]%`);
+    }
+
+    const { data: postsData, error: e, count } = await query;
     if (e) { setError('Could not load posts. Try refreshing.'); setLoading(false); return; }
+
+    if (postsData) {
+      const currentCount = (count !== null) ? count : 0;
+      setHasMore((pageNum + 1) * PAGE_SIZE < currentCount);
+    }
 
     const userIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
     let profileMap: Record<string, any> = {};
@@ -116,14 +141,24 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       }
     }
 
-    setPosts((postsData || []).map((p: any) => ({ 
+    const fetchedPosts = (postsData || []).map((p: any) => ({
       ...p, 
       profiles: profileMap[p.user_id] || null,
       like_count: likesMap[p.id]?.count || 0,
       liked_by_me: likesMap[p.id]?.me || false,
       comments: commentsMap[p.id] || [],
       favorited_by_me: favoritedPostIds.has(p.id)
-    })));
+    }));
+
+    if (pageNum === 0) {
+      setPosts(fetchedPosts);
+    } else {
+      setPosts(prev => {
+        const existingIds = new Set(prev.map(item => item.id));
+        const uniqueNew = fetchedPosts.filter(item => !existingIds.has(item.id));
+        return [...prev, ...uniqueNew];
+      });
+    }
     setLoading(false);
   }
 
@@ -170,7 +205,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     if (!e) { 
       setContent(''); 
       setImageUrl('');
-      fetchPosts(); 
+      fetchPosts(0, true); 
     }
     else setError('Could not post. Try again.');
     setPosting(false);
@@ -276,12 +311,11 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   }
 
   const filteredPosts = posts.filter(p => {
-    const matchesCat = filterSocialCat === 'All' || p.content?.includes(`[#${filterSocialCat}]`);
     const matchesSearch = !searchTerm || 
       p.content?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       p.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.profiles?.username?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCat && matchesSearch;
+    return matchesSearch;
   });
 
   return (
@@ -408,7 +442,9 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
           <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-pine-dark)' }}>No posts under this category yet.</p>
           <p>Be the first to share your recipes and life updates.</p>
         </div>
-      ) : filteredPosts.map(post => (
+      ) : (
+        <>
+          {filteredPosts.map(post => (
         <article key={post.id} className="card post-card">
           <div className="post-header">
             <div className="post-author">
@@ -485,6 +521,23 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
           )}
         </article>
       ))}
+          {hasMore && (
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+              <button
+                onClick={() => {
+                  const nextPage = page + 1;
+                  setPage(nextPage);
+                  fetchPosts(nextPage);
+                }}
+                disabled={loading}
+                style={{ padding: '0.6rem 1.5rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', color: 'var(--color-pine-primary)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              >
+        {loading && posts.length > 0 ? 'Loading more…' : 'Load More'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -529,26 +582,39 @@ function ForYouFeed({ currentUser }: { currentUser: any }) {
     // Step 4: Blend and filter with interest & location algorithm
     const blended = [...(digitalItems || []).map(i => ({ ...i, type: 'digital' })), ...(localItems || []).map(i => ({ ...i, type: 'local' }))];
 
-    blended.sort((a, b) => {
-      // 1. Proximity: Prioritize local items in the same state first
-      const aInState = a.type === 'local' && a.location_state?.toUpperCase() === userState;
-      const bInState = b.type === 'local' && b.location_state?.toUpperCase() === userState;
-      if (aInState && !bInState) return -1;
-      if (!aInState && bInState) return 1;
+    const lowercaseInterests = interests.map(i => i.toLowerCase());
+    const blendedWithSortKeys = blended.map(item => {
+      const isLocal = item.type === 'local';
+      const inState = isLocal && item.location_state?.toUpperCase() === userState;
 
-      // 2. Interests: Check category matching
-      if (interests.length > 0) {
-        const aInterest = interests.some(i => a.category?.toLowerCase().includes(i.toLowerCase()));
-        const bInterest = interests.some(i => b.category?.toLowerCase().includes(i.toLowerCase()));
-        if (aInterest && !bInterest) return -1;
-        if (!aInterest && bInterest) return 1;
+      let hasInterest = false;
+      if (lowercaseInterests.length > 0) {
+        const lowerCat = item.category?.toLowerCase() || '';
+        hasInterest = lowercaseInterests.some(i => lowerCat.includes(i));
       }
 
-      // 3. Recency: Fallback chronologically
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return {
+        item,
+        inState,
+        hasInterest,
+        time: new Date(item.created_at).getTime()
+      };
     });
 
-    setBlendedProducts(blended.slice(0, 24));
+    blendedWithSortKeys.sort((a, b) => {
+      // 1. Proximity
+      if (a.inState && !b.inState) return -1;
+      if (!a.inState && b.inState) return 1;
+
+      // 2. Interests
+      if (a.hasInterest && !b.hasInterest) return -1;
+      if (!a.hasInterest && b.hasInterest) return 1;
+
+      // 3. Recency
+      return b.time - a.time;
+    });
+
+    setBlendedProducts(blendedWithSortKeys.slice(0, 24).map(m => m.item));
     setLoading(false);
   }
 
