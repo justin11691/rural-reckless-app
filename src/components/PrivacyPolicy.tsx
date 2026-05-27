@@ -37,7 +37,10 @@ export function PrivacyPolicy() {
         <section style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <h3 style={{ color: 'var(--color-pine-dark)' }}>4. Third-Party Services and Ads</h3>
           <p style={{ color: 'var(--color-text-main)', lineHeight: 1.6 }}>
-            We integrate third-party services to supply advertising units (such as Google AdSense). These third-party networks may use tracking tools such as cookies and beacons to optimize ad targeting according to your browsing behavior. You can opt out of personalized ad targeting via your individual Google Account.
+            We integrate third-party services to supply advertising units (such as Google AdSense). Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to our website or other websites on the internet. Google's use of advertising cookies enables it and its partners to serve ads to our users based on their visits to our site and/or other sites on the Internet.
+          </p>
+          <p style={{ color: 'var(--color-text-main)', lineHeight: 1.6 }}>
+            Users may opt out of personalized advertising by visiting the <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-pine-primary)', textDecoration: 'underline' }}>Google Ads Settings</a> page. Alternatively, you can opt out of a third-party vendor's use of cookies for personalized advertising by visiting the <a href="https://www.aboutads.info" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-pine-primary)', textDecoration: 'underline' }}>www.aboutads.info</a> page.
           </p>
         </section>
 
