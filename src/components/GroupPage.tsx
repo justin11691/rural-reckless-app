@@ -5,6 +5,7 @@ import {
   Settings, UserCheck, UserX, Mail, X, Share2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { parseContent } from '../lib/formatters';
 
 const ICONS: Record<string,string> = {
   'Woodworking':'🪵','3D Printing':'🧊','Arts & Crafts':'🎨','Homesteading':'🌱',
@@ -156,17 +157,7 @@ function ManagePanel({ group, currentUserId, onClose, onRefresh }: {
 }
 
 // ── Group Post Card ───────────────────────────────────────────────────────────
-function parseContent(text: string) {
-  if (!text) return null;
-  const parts = text.split(/(\[.*?\]\(.*?\))/g);
-  return parts.map((part, i) => {
-    const match = part.match(/\[(.*?)\]\((.*?)\)/);
-    if (match) {
-      return <a key={i} href={match[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-pine-primary)', textDecoration: 'underline', fontWeight: 600 }}>{match[1]}</a>;
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
+// parseContent moved to lib/formatters.tsx
 
 function GroupPostCard({ post, currentUserId, onDelete }: { post:any; currentUserId:string|null; onDelete:(id:string)=>void }) {
   const canDelete = post.user_id === currentUserId;
@@ -225,6 +216,10 @@ export function GroupPage() {
   const [posting, setPosting]         = useState(false);
   const [managing, setManaging]       = useState(false);
   const [activeSubTag, setActiveSubTag] = useState('All');
+
+  // Structured Post State
+  const [postType, setPostType] = useState<'general'|'recipe'|'pattern'>('general');
+  const [structuredForm, setStructuredForm] = useState({ title: '', prepTime: '', cookTime: '', ingredients: '', instructions: '' });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data:{ session } }) => {
@@ -311,14 +306,43 @@ export function GroupPage() {
   }
 
   async function submitPost() {
-    if (!postText.trim()||!currentUser) return;
+    if (!currentUser) return;
+    
+    let bodyContent = postText;
+
+    if (postType === 'recipe' || postType === 'pattern') {
+      if (!structuredForm.title.trim()) return;
+      const parts = [];
+      parts.push(`# ${postType === 'recipe' ? '🍳 Recipe' : '🧵 Pattern'}: ${structuredForm.title}`);
+      
+      if (structuredForm.prepTime || structuredForm.cookTime) {
+        let times = [];
+        if (structuredForm.prepTime) times.push(`**Prep**: ${structuredForm.prepTime}`);
+        if (structuredForm.cookTime) times.push(`**Time**: ${structuredForm.cookTime}`);
+        parts.push(times.join(' | '));
+      }
+      if (structuredForm.ingredients) {
+        parts.push(`\n### ${postType === 'recipe' ? 'Ingredients' : 'Materials'}`);
+        const items = structuredForm.ingredients.split('\n').map(i => i.trim()).filter(Boolean);
+        items.forEach(i => parts.push(i.startsWith('-') || i.startsWith('•') || i.startsWith('*') ? i : `• ${i}`));
+      }
+      if (structuredForm.instructions) {
+        parts.push(`\n### Instructions`);
+        parts.push(structuredForm.instructions);
+      }
+      bodyContent = parts.join('\n');
+    } else {
+      if (!postText.trim()) return;
+    }
+
     setPosting(true);
     await supabase.from('posts').insert([{
       user_id: currentUser.id,
-      content: postText.trim(),
+      content: bodyContent,
       group_id: id,
     }]);
     setPostText('');
+    setStructuredForm({ title: '', prepTime: '', cookTime: '', ingredients: '', instructions: '' });
     loadAll(currentUser.id);
     setPosting(false);
   }
@@ -455,19 +479,39 @@ export function GroupPage() {
           {canPost ? (
             <div className="card" style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
               <p style={{margin:0,fontWeight:600,color:'var(--color-pine-dark)',fontSize:'0.95rem'}}>Share something with the group</p>
-              <textarea
-                className="post-input"
-                rows={3}
-                value={postText}
-                onChange={e=>setPostText(e.target.value)}
-                placeholder="What's on your mind?"
-                style={{width:'100%',margin:0,resize:'vertical'}}
-                aria-label="Write a group post"
-              />
+              
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <button onClick={() => setPostType('general')} style={{ flex: 1, padding: '0.35rem', background: postType === 'general' ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: postType === 'general' ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', fontSize: '0.8rem', fontWeight: 600 }}>General Post</button>
+                <button onClick={() => setPostType('recipe')} style={{ flex: 1, padding: '0.35rem', background: postType === 'recipe' ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: postType === 'recipe' ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', fontSize: '0.8rem', fontWeight: 600 }}>Recipe</button>
+                <button onClick={() => setPostType('pattern')} style={{ flex: 1, padding: '0.35rem', background: postType === 'pattern' ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: postType === 'pattern' ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', fontSize: '0.8rem', fontWeight: 600 }}>Pattern</button>
+              </div>
+
+              {postType === 'general' ? (
+                <textarea
+                  className="post-input"
+                  rows={3}
+                  value={postText}
+                  onChange={e=>setPostText(e.target.value)}
+                  placeholder="What's on your mind?"
+                  style={{width:'100%',margin:0,resize:'vertical'}}
+                  aria-label="Write a group post"
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: '#fbf7f0', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid #efe4d3' }}>
+                  <input type="text" className="post-input" placeholder={`${postType === 'recipe' ? 'Recipe Title' : 'Pattern Title'} *`} value={structuredForm.title} onChange={e => setStructuredForm({...structuredForm, title: e.target.value})} style={{ margin: 0, fontWeight: 700 }} />
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="text" className="post-input" placeholder="Prep Time" value={structuredForm.prepTime} onChange={e => setStructuredForm({...structuredForm, prepTime: e.target.value})} style={{ margin: 0, flex: 1 }} />
+                    <input type="text" className="post-input" placeholder={postType === 'recipe' ? "Cook Time" : "Total Time"} value={structuredForm.cookTime} onChange={e => setStructuredForm({...structuredForm, cookTime: e.target.value})} style={{ margin: 0, flex: 1 }} />
+                  </div>
+                  <textarea className="post-input" rows={3} placeholder={postType === 'recipe' ? "Ingredients (one per line)" : "Materials needed (one per line)"} value={structuredForm.ingredients} onChange={e => setStructuredForm({...structuredForm, ingredients: e.target.value})} style={{ margin: 0, resize: 'vertical' }} />
+                  <textarea className="post-input" rows={4} placeholder="Instructions" value={structuredForm.instructions} onChange={e => setStructuredForm({...structuredForm, instructions: e.target.value})} style={{ margin: 0, resize: 'vertical' }} />
+                </div>
+              )}
+
               <div style={{display:'flex',justifyContent:'flex-end'}}>
                 <button
                   onClick={submitPost}
-                  disabled={!postText.trim()||posting}
+                  disabled={postType === 'general' ? (!postText.trim()||posting) : (!structuredForm.title.trim()||posting)}
                   style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.5rem 1.1rem'}}
                 >
                   <Send size={15}/>{posting?'Posting…':'Post'}

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu, Trash2, Send, Package, Box, Heart, Image as ImageIcon } from 'lucide-react';
+import { ThumbsUp, MessageCircle, Share2, Leaf, ShoppingCart, BookOpen, Cpu, Trash2, Send, Package, Box, Heart, Image as ImageIcon, ChefHat, Scissors } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Link } from 'react-router-dom';
 import { AdSenseUnit } from './AdSenseUnit';
+import { parseContent } from '../lib/formatters';
 
 function timeAgo(dateStr: string) {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -11,17 +13,7 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function parseContent(text: string) {
-  if (!text) return null;
-  const parts = text.split(/(\[.*?\]\(.*?\))/g);
-  return parts.map((part, i) => {
-    const match = part.match(/\[(.*?)\]\((.*?)\)/);
-    if (match) {
-      return <a key={i} href={match[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-pine-primary)', textDecoration: 'underline', fontWeight: 600 }}>{match[1]}</a>;
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
+// parseContent moved to lib/formatters.tsx
 
 const CAT_ICONS: Record<string, React.ReactNode> = {
   'E-Book': <BookOpen size={16} />, 'Short Story / Poetry': <BookOpen size={16} />,
@@ -35,13 +27,17 @@ const PAGE_SIZE = 10;
 function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; currentUserProfile: any }) {
   const [posts, setPosts] = useState<any[]>([]);
   const [content, setContent] = useState('');
-  const [postCategory, setPostCategory] = useState<'General' | 'Life Event' | 'Recipe' | 'Day to Day'>('General');
+  const [postCategory, setPostCategory] = useState<'General' | 'Life Event' | 'Recipe' | 'Sewing Pattern' | 'Day to Day' | 'Knowledge' | 'Survival'>('General');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [posting, setPosting] = useState(false);
   const [activeCommentPost, setActiveCommentPost] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
-  const [filterSocialCat, setFilterSocialCat] = useState<'All' | 'Life Event' | 'Recipe' | 'Day to Day' | 'Knowledge' | 'Survival'>('All');
+  const [filterSocialCat, setFilterSocialCat] = useState<'All' | 'Life Event' | 'Recipe' | 'Day to Day' | 'Knowledge' | 'Survival' | 'Sewing Pattern'>('All');
+
+  // Structured Post State
+  const [postType, setPostType] = useState<'general'|'recipe'|'pattern'>('general');
+  const [structuredForm, setStructuredForm] = useState({ title: '', prepTime: '', cookTime: '', ingredients: '', instructions: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -65,8 +61,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
 
     let query = supabase
       .from('posts')
-      .select('*', { count: 'exact' })
-      .is('group_id', null)
+      .select('*, communities:group_id(id, name, is_public)', { count: 'exact' })
       .not('user_id', 'is', null)
       .order('created_at', { ascending: false })
       .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
@@ -194,10 +189,47 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
   }
 
   async function submit() {
-    if ((!content.trim() && !imageUrl) || !currentUser) return;
+    if (!currentUser) return;
+    
+    let bodyContent = content;
+    let finalCategory = postCategory;
+
+    // Build markdown for structured posts
+    if (postType === 'recipe' || postType === 'pattern') {
+      if (!structuredForm.title.trim()) return; // Title is required
+      finalCategory = postType === 'recipe' ? 'Recipe' : 'Sewing Pattern';
+      
+      const parts = [];
+      parts.push(`# ${postType === 'recipe' ? '🍳 Recipe' : '🧵 Pattern'}: ${structuredForm.title}`);
+      
+      if (structuredForm.prepTime || structuredForm.cookTime) {
+        let times = [];
+        if (structuredForm.prepTime) times.push(`**Prep**: ${structuredForm.prepTime}`);
+        if (structuredForm.cookTime) times.push(`**Time**: ${structuredForm.cookTime}`);
+        parts.push(times.join(' | '));
+      }
+      
+      if (structuredForm.ingredients) {
+        parts.push(`\n### ${postType === 'recipe' ? 'Ingredients' : 'Materials'}`);
+        // Convert to bullet points if not already
+        const items = structuredForm.ingredients.split('\n').map(i => i.trim()).filter(Boolean);
+        items.forEach(i => parts.push(i.startsWith('-') || i.startsWith('•') || i.startsWith('*') ? i : `• ${i}`));
+      }
+      
+      if (structuredForm.instructions) {
+        parts.push(`\n### Instructions`);
+        parts.push(structuredForm.instructions);
+      }
+      
+      bodyContent = parts.join('\n');
+    } else {
+      if (!content.trim() && !imageUrl) return;
+      if (finalCategory !== 'General') {
+        bodyContent = `[#${finalCategory}] ${content}`;
+      }
+    }
+
     setPosting(true);
-    // Leverage content/metadata to store category or add custom flags
-    const bodyContent = postCategory !== 'General' ? `[#${postCategory}] ${content}` : content;
     const { error: e } = await supabase.from('posts').insert([{ 
       user_id: currentUser.id, 
       content: bodyContent,
@@ -206,6 +238,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     if (!e) { 
       setContent(''); 
       setImageUrl('');
+      setStructuredForm({ title: '', prepTime: '', cookTime: '', ingredients: '', instructions: '' });
       fetchPosts(0, true); 
     }
     else setError('Could not post. Try again.');
@@ -362,10 +395,30 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       <div className="card create-post">
         <img src={currentUserProfile?.avatar_url || '/images/avatar_maker.png'} alt="You" className="avatar-small" style={{ width: 40, height: 40, flexShrink: 0 }} />
         <div className="post-input-wrapper">
-          <textarea className="post-input" rows={3} placeholder="Share a life event, a new recipe, or your day-to-day moments..."
-            value={content} onChange={e => setContent(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) submit(); }}
-            aria-label="Write a post" />
+          
+          {/* Post Type Selector */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <button onClick={() => setPostType('general')} style={{ flex: 1, padding: '0.4rem', background: postType === 'general' ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: postType === 'general' ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}><MessageCircle size={14}/> General Post</button>
+            <button onClick={() => setPostType('recipe')} style={{ flex: 1, padding: '0.4rem', background: postType === 'recipe' ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: postType === 'recipe' ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}><ChefHat size={14}/> Recipe</button>
+            <button onClick={() => setPostType('pattern')} style={{ flex: 1, padding: '0.4rem', background: postType === 'pattern' ? 'var(--color-pine-primary)' : 'var(--color-bg-base)', color: postType === 'pattern' ? 'white' : 'var(--color-text-main)', border: '1px solid var(--color-border)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}><Scissors size={14}/> Pattern</button>
+          </div>
+
+          {postType === 'general' ? (
+            <textarea className="post-input" rows={3} placeholder="Share a life event, a new recipe, or your day-to-day moments..."
+              value={content} onChange={e => setContent(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) submit(); }}
+              aria-label="Write a post" />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: '#fbf7f0', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid #efe4d3' }}>
+              <input type="text" className="post-input" placeholder={`${postType === 'recipe' ? 'Recipe Title (e.g. Sourdough Bread)' : 'Pattern Title (e.g. Quilted Tote)'} *`} value={structuredForm.title} onChange={e => setStructuredForm({...structuredForm, title: e.target.value})} style={{ margin: 0, fontWeight: 700 }} />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input type="text" className="post-input" placeholder="Prep Time (e.g. 15m)" value={structuredForm.prepTime} onChange={e => setStructuredForm({...structuredForm, prepTime: e.target.value})} style={{ margin: 0, flex: 1 }} />
+                <input type="text" className="post-input" placeholder={postType === 'recipe' ? "Cook Time (e.g. 45m)" : "Total Time"} value={structuredForm.cookTime} onChange={e => setStructuredForm({...structuredForm, cookTime: e.target.value})} style={{ margin: 0, flex: 1 }} />
+              </div>
+              <textarea className="post-input" rows={3} placeholder={postType === 'recipe' ? "Ingredients (one per line)\n- 500g Flour\n- 350g Water" : "Materials needed (one per line)\n- 1 yard canvas\n- Thread"} value={structuredForm.ingredients} onChange={e => setStructuredForm({...structuredForm, ingredients: e.target.value})} style={{ margin: 0, resize: 'vertical' }} />
+              <textarea className="post-input" rows={4} placeholder={`Instructions\n1. First step\n2. Second step`} value={structuredForm.instructions} onChange={e => setStructuredForm({...structuredForm, instructions: e.target.value})} style={{ margin: 0, resize: 'vertical' }} />
+            </div>
+          )}
           
           {imageUrl && (
             <div style={{ position: 'relative', marginTop: '0.75rem', width: 'fit-content' }}>
@@ -423,7 +476,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
                 <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} disabled={uploading} />
               </label>
             </div>
-            <button onClick={submit} disabled={(!content.trim() && !imageUrl) || posting || uploading} style={{ padding: '0.55rem 1.25rem', background: 'var(--color-pine-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={submit} disabled={postType === 'general' ? ((!content.trim() && !imageUrl) || posting || uploading) : (!structuredForm.title.trim() || posting || uploading)} style={{ padding: '0.55rem 1.25rem', background: 'var(--color-pine-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 600, cursor: 'pointer' }}>
               {posting ? 'Posting…' : 'Post'}
             </button>
           </div>
@@ -449,11 +502,21 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
         <article key={post.id} className="card post-card">
           <div className="post-header">
             <div className="post-author">
-              <img src={post.profiles?.avatar_url || '/images/avatar_maker.png'} alt={post.profiles?.username || 'Member'} className="avatar-small" style={{ width: 40, height: 40 }} />
-              <div className="author-info">
-                <h4>{post.profiles?.full_name || post.profiles?.username || 'Anonymous Maker'}</h4>
-                <span className="post-time">{timeAgo(post.created_at)}{post.profiles?.tagline ? ` · ${post.profiles.tagline}` : ''}</span>
-              </div>
+              <Link to={`/profile/${post.user_id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', color: 'inherit' }}>
+                <img src={post.profiles?.avatar_url || '/images/avatar_maker.png'} alt={post.profiles?.username || 'Member'} className="avatar-small" style={{ width: 40, height: 40 }} />
+                <div className="author-info">
+                  <h4 style={{ margin: 0 }}>{post.profiles?.full_name || post.profiles?.username || 'Anonymous Maker'}</h4>
+                  <span className="post-time" style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                    {timeAgo(post.created_at)}
+                    {post.profiles?.tagline ? ` · ${post.profiles.tagline}` : ''}
+                    {post.communities?.name ? (
+                      <Link to={`/communities/${post.group_id}`} style={{ color: 'var(--color-pine-primary)', textDecoration: 'none', fontWeight: 600, marginLeft: '0.25rem' }}>
+                        · in {post.communities.name}
+                      </Link>
+                    ) : ''}
+                  </span>
+                </div>
+              </Link>
             </div>
             {currentUser && currentUser.id === post.user_id && (
               <button onClick={() => deletePost(post.id)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '0.25rem' }} title="Delete post">
@@ -493,9 +556,15 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
                 {(post.comments || []).map((c: any) => (
                   <div key={c.id} style={{ display: 'flex', gap: '0.5rem' }}>
-                    <img src={c.profiles?.avatar_url || '/images/avatar_maker.png'} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+                    <Link to={`/profile/${c.user_id}`} style={{ flexShrink: 0 }}>
+                      <img src={c.profiles?.avatar_url || '/images/avatar_maker.png'} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+                    </Link>
                     <div style={{ background: 'var(--color-bg-card)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', flex: 1 }}>
-                      <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 600 }}>{c.profiles?.full_name || c.profiles?.username}</p>
+                      <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 600 }}>
+                        <Link to={`/profile/${c.user_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {c.profiles?.full_name || c.profiles?.username}
+                        </Link>
+                      </p>
                       <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem' }}>{c.content}</p>
                     </div>
                   </div>

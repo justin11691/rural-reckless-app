@@ -42,7 +42,7 @@ export function AdSenseUnit({ slotId, format = 'auto', className = '', style = {
       <ins 
         className="adsbygoogle"
         style={{ display: 'block', minWidth: '250px', minHeight: '90px' }}
-        data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+        data-ad-client="ca-pub-4763238667156624"
         data-ad-slot={slotId}
         data-ad-format={format}
         data-full-width-responsive="true"

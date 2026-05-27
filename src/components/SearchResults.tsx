@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Search, User, FileText, ShoppingBag, Leaf, ExternalLink } from 'lucide-react';
+import { Search, User, FileText, ShoppingBag, Leaf, ExternalLink, Users } from 'lucide-react';
 
 export function SearchResults() {
   const [searchParams] = useSearchParams();
@@ -9,6 +9,7 @@ export function SearchResults() {
   const [users, setUsers] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [listings, setListings] = useState<any[]>([]);
+  const [communities, setCommunities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -70,6 +71,16 @@ export function SearchResults() {
 
       if (listErr) throw listErr;
       setListings(listingsData || []);
+
+      // 4. Search Communities
+      const { data: communitiesData, error: commErr } = await supabase
+        .from('communities')
+        .select('id, name, description, category, is_public, member_count, icon')
+        .or(`name.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
+        .limit(10);
+
+      if (commErr) throw commErr;
+      setCommunities(communitiesData || []);
 
     } catch (err: any) {
       console.error(err);
@@ -176,6 +187,43 @@ export function SearchResults() {
                       <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>· {new Date(p.created_at).toLocaleDateString()}</span>
                     </div>
                     <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-main)', lineHeight: 1.5 }}>{p.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Communities */}
+          <div>
+            <h3 style={{ borderBottom: '2px solid var(--color-border)', paddingBottom: '0.4rem', color: 'var(--color-pine-dark)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem', marginBottom: '1rem' }}>
+              <Users size={20} /> Communities ({communities.length})
+            </h3>
+            {communities.length === 0 ? (
+              <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No communities found matching the query.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {communities.map(c => (
+                  <div key={c.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '1rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                      <div style={{ width: 48, height: 48, background: 'var(--color-bg-base)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }} aria-hidden>
+                        {c.icon || '🏡'}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <Link to={`/communities/${c.id}`} style={{ textDecoration: 'none', color: 'var(--color-pine-dark)', fontWeight: 700, display: 'block', fontSize: '1.05rem' }}>
+                          {c.name}
+                        </Link>
+                        {c.description && <p style={{ margin: '0.2rem 0', fontSize: '0.85rem', color: 'var(--color-text-muted)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.description}</p>}
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                          {c.category && (
+                            <span style={{ fontSize: '0.75rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', padding: '0.15rem 0.5rem', borderRadius: '4px', color: 'var(--color-text-muted)' }}>
+                              {c.category}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{c.member_count || 1} members</span>
+                          {!c.is_public && <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', padding: '0.15rem 0.4rem', borderRadius: 4 }}>Private</span>}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

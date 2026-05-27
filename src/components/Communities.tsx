@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Users, Search, TrendingUp, Plus, X, Lock, Settings, UserCheck, UserX, Mail } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Share2, Search, Users, Plus, X, Lock, Compass, UserCheck, UserX, Mail, TrendingUp, Trash2, Settings, List } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { parseContent, timeAgo } from '../lib/formatters';
 
-const CATEGORIES = ['General','Woodworking','3D Printing','Arts & Crafts','Homesteading','Reading Club','Farming','Music','Writing','Recipes & Cooking','Sewing & Patterns','Livestock & Pets','Other'];
+const CATEGORIES = ['Farming', 'Livestock', 'Gardening', 'Homesteading', 'DIY & Crafts', 'Food Preservation', 'Off-Grid Living', 'Community Support'];
 const ICONS: Record<string,string> = { 'Woodworking':'🪵','3D Printing':'🧊','Arts & Crafts':'🎨','Homesteading':'🌱','Reading Club':'📖','Farming':'🌾','Music':'🎸','Writing':'✍️','General':'🏡','Recipes & Cooking':'🍳','Sewing & Patterns':'🧵','Livestock & Pets':'🐄','Other':'🤠' };
 
 function fmt(n:number) { return n>=1000?`${(n/1000).toFixed(1)}k`:String(n); }
@@ -226,6 +227,111 @@ function GroupCard({ group, currentUserId, membership, onAction }: { group:any; 
   );
 }
 
+// ── Group Feed ───────────────────────────────────────────────────────────────
+function GroupFeed({ memberships, currentUser }: { memberships: any[], currentUser: any }) {
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFeed();
+  }, [memberships]);
+
+  async function fetchFeed() {
+    setLoading(true);
+    const activeGroupIds = memberships.filter(m => m.status === 'active').map(m => m.group_id);
+    
+    if (activeGroupIds.length === 0) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data: postsData } = await supabase
+      .from('posts')
+      .select('*, communities:group_id(id, name, icon)')
+      .in('group_id', activeGroupIds)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (postsData) {
+      const uids = [...new Set(postsData.map((p:any)=>p.user_id))];
+      const { data: profs } = await supabase.from('profiles').select('id,username,full_name,avatar_url').in('id', uids);
+      const profileMap: Record<string,any> = {};
+      (profs||[]).forEach((p:any)=>{ profileMap[p.id]=p; });
+      setPosts(postsData.map((p:any)=>({ ...p, profile: profileMap[p.user_id]||null })));
+    }
+    setLoading(false);
+  }
+
+  async function deletePost(postId:string) {
+    if (!confirm('Delete this post?')) return;
+    await supabase.from('posts').delete().eq('id', postId);
+    setPosts(prev => prev.filter(p=>p.id!==postId));
+  }
+
+  if (loading) return <div style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '2rem' }}>Loading feed…</div>;
+
+  if (posts.length === 0) return (
+    <div className="card" style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
+      <Users size={40} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.35 }} />
+      <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-pine-dark)' }}>Your feed is quiet.</p>
+      <p>Posts from the groups you join will appear here.</p>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <h2 style={{ fontSize: '1.4rem', color: 'var(--color-pine-dark)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <List size={20} /> Your Groups Feed
+      </h2>
+      {posts.map(post => {
+        const canDelete = post.user_id === currentUser?.id;
+        return (
+          <div key={post.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <img
+                src={post.profile?.avatar_url || '/images/avatar_maker.png'}
+                alt={post.profile?.full_name || 'Member'}
+                style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+              />
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem', color: 'var(--color-pine-dark)' }}>
+                  {post.profile?.full_name || post.profile?.username || 'A member'}
+                  <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: '0.85rem', marginLeft: '0.4rem' }}>
+                    ▶ <Link to={`/communities/${post.communities?.id}`} style={{ color: 'var(--color-pine-dark)', textDecoration: 'none', fontWeight: 600 }}>{post.communities?.name}</Link>
+                  </span>
+                </p>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{timeAgo(post.created_at)}</p>
+              </div>
+              <button onClick={() => {
+                if (navigator.share) {
+                  navigator.share({ title: 'Rural & Reckless Post', text: post.content, url: window.location.href });
+                } else {
+                  navigator.clipboard.writeText(window.location.origin + window.location.pathname);
+                  alert('Link copied to clipboard!');
+                }
+              }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: '0.25rem' }} title="Share">
+                <Share2 size={16} />
+              </button>
+              {canDelete && (
+                <button onClick={() => deletePost(post.id)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: '0.25rem' }}
+                  aria-label="Delete post">
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+            <div className="post-text">{parseContent(post.content)}</div>
+            {post.image_url && (
+              <img src={post.image_url} alt="Post attachment" style={{ width: '100%', borderRadius: 'var(--radius-md)', maxHeight: 320, objectFit: 'cover' }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main Component ───────────────────────────────────────────────────────────
 export function Communities() {
   const [groups, setGroups] = useState<any[]>([]);
@@ -236,6 +342,7 @@ export function Communities() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name:'', description:'', category:'General', is_public:true });
+  const [activeTab, setActiveTab] = useState<'discover'|'feed'>('discover');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data:{ session } }) => setCurrentUser(session?.user??null));
@@ -264,30 +371,29 @@ export function Communities() {
   }
 
   const getMembership = (groupId:string) => memberships.find((m:any)=>m.group_id===groupId);
-
   const filtered = groups.filter(g => !search || g.name.toLowerCase().includes(search.toLowerCase()) || (g.category||'').toLowerCase().includes(search.toLowerCase()));
 
+  const myActiveGroups = memberships.filter(m => m.status === 'active').map(m => groups.find(g => g.id === m.group_id)).filter(Boolean);
+
+  const NavButton = ({ id, icon: Icon, label }: { id: 'discover'|'feed', icon: any, label: string }) => (
+    <button 
+      onClick={() => setActiveTab(id)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.75rem 1rem',
+        background: activeTab === id ? 'var(--color-pine-primary)' : 'transparent',
+        color: activeTab === id ? 'white' : 'var(--color-pine-dark)',
+        border: 'none', borderRadius: 'var(--radius-md)', textAlign: 'left',
+        fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.2s',
+        boxShadow: activeTab === id ? 'var(--shadow-sm)' : 'none'
+      }}
+    >
+      <Icon size={18} /> {label}
+    </button>
+  );
+
   return (
-    <div style={{ flex:1, padding:'2rem', display:'flex', flexDirection:'column', gap:'2rem', overflowX:'hidden' }}>
-      {/* Hero */}
-      <div className="card" style={{ padding:'2rem', background:'var(--color-pine-dark)', color:'white' }}>
-        <h1 style={{ display:'flex', alignItems:'center', gap:'1rem', margin:0, fontSize:'2rem' }}><Users size={32}/> Communities Hub</h1>
-        <p style={{ marginTop:'0.5rem', opacity:0.85, fontSize:'1.05rem' }}>Find your people. Join public groups or request access to private ones. Start your own club — no permission needed.</p>
-      </div>
-
-      {/* Controls */}
-      <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap' }}>
-        <div className="nav-search" style={{ flex:1, minWidth:180, maxWidth:440, background:'var(--color-bg-base)' }}>
-          <Search className="search-icon" size={18}/>
-          <input type="text" placeholder="Search groups..." value={search} onChange={e=>setSearch(e.target.value)} aria-label="Search communities"/>
-        </div>
-        {currentUser && (
-          <button onClick={()=>setShowCreate(true)} style={{ display:'flex', alignItems:'center', gap:'0.5rem', whiteSpace:'nowrap' }} aria-label="Create a group">
-            <Plus size={18}/> Create Group
-          </button>
-        )}
-      </div>
-
+    <div style={{ flex: 1, padding: '2rem 1.5rem', overflowX: 'hidden' }}>
+      
       {/* Create Modal */}
       {showCreate && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:300, padding:'1rem' }}
@@ -330,39 +436,100 @@ export function Communities() {
         </div>
       )}
 
-      {/* Meetups Board */}
-      <div className="card" style={{ padding:'1.25rem 1.75rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
-        <h3 style={{ margin: 0, color: 'var(--color-pine-dark)', fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🤝 Upcoming Community Meetups & Workshops</h3>
-        <p style={{ marginTop: '0.25rem', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Connect offline for local plant swaps, farmers market gatherings, or hands-on classes.</p>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-          <div style={{ flex: 1, minWidth: '220px', background: '#fbf7f0', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid #efe4d3' }}>
-            <span style={{ fontSize: '0.72rem', background: 'var(--color-pine-primary)', color: 'white', padding: '0.15rem 0.45rem', borderRadius: 4, fontWeight: 700 }}>May 18</span>
-            <h5 style={{ margin: '0.35rem 0 0.1rem', color: 'var(--color-pine-dark)', fontSize: '0.9rem' }}>Spring Seedling & Plant Swap</h5>
-            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>Blue Ridge Community Center · 10:00 AM</p>
+      <div className="communities-layout">
+        {/* Left Sidebar */}
+        <aside className="communities-left-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: '2rem' }}>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <NavButton id="feed" icon={List} label="Your Feed" />
+            <NavButton id="discover" icon={Compass} label="Discover" />
           </div>
-          <div style={{ flex: 1, minWidth: '220px', background: '#fbf7f0', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid #efe4d3' }}>
-            <span style={{ fontSize: '0.72rem', background: 'var(--color-pine-primary)', color: 'white', padding: '0.15rem 0.45rem', borderRadius: 4, fontWeight: 700 }}>Jun 05</span>
-            <h5 style={{ margin: '0.35rem 0 0.1rem', color: 'var(--color-pine-dark)', fontSize: '0.9rem' }}>Handmade Soapmaking Class</h5>
-            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>Artisan Collective Studio · 2:30 PM</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Groups Grid */}
-      {loading ? (
-        <p style={{ color:'var(--color-text-muted)' }}>Loading groups…</p>
-      ) : filtered.length === 0 ? (
-        <div className="card" style={{ textAlign:'center', padding:'2.5rem 1rem', color:'var(--color-text-muted)' }}>
-          <p style={{ fontSize:'1.05rem', marginBottom:'0.5rem', color:'var(--color-pine-dark)' }}>No groups found.</p>
-          <p>Try a different search, or start one yourself.</p>
-        </div>
-      ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:'1.25rem' }}>
-          {filtered.map(g=>(
-            <GroupCard key={g.id} group={g} currentUserId={currentUser?.id??null} membership={getMembership(g.id)} onAction={fetchGroups}/>
-          ))}
-        </div>
-      )}
+          {currentUser && (
+            <button onClick={() => setShowCreate(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', background: 'var(--color-bg-card)', color: 'var(--color-pine-dark)', border: '2px solid var(--color-pine-dark)' }}>
+              <Plus size={18} /> Create Group
+            </button>
+          )}
+
+          {myActiveGroups.length > 0 && (
+            <div>
+              <h4 style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>Your Groups</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {myActiveGroups.map((g: any) => (
+                  <Link key={g.id} to={`/communities/${g.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'var(--color-pine-dark)', transition: 'background 0.2s' }} className="hover-bg-card">
+                    <div style={{ width: 28, height: 28, background: 'var(--color-bg-base)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', border: '1px solid var(--color-border)' }}>
+                      {g.icon || ICONS[g.category] || '🏡'}
+                    </div>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </aside>
+
+        {/* Main Content Area */}
+        <main>
+          {activeTab === 'discover' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Hero */}
+              <div className="card" style={{ padding:'2rem', background:'var(--color-pine-dark)', color:'white' }}>
+                <h1 style={{ display:'flex', alignItems:'center', gap:'1rem', margin:0, fontSize:'1.8rem' }}><Users size={28}/> Communities Hub</h1>
+                <p style={{ marginTop:'0.5rem', opacity:0.85, fontSize:'1rem' }}>Find your people. Join public groups or request access to private ones. Start your own club — no permission needed.</p>
+              </div>
+
+              {/* Controls */}
+              <div className="nav-search" style={{ background:'var(--color-bg-base)', position: 'relative' }}>
+                <Search className="search-icon" size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }}/>
+                <input type="text" placeholder="Search groups..." value={search} onChange={e=>setSearch(e.target.value)} aria-label="Search communities" style={{ width: '100%' }}/>
+              </div>
+
+              {/* Groups Grid */}
+              {loading ? (
+                <p style={{ color:'var(--color-text-muted)', textAlign: 'center', padding: '2rem' }}>Loading groups…</p>
+              ) : filtered.length === 0 ? (
+                <div className="card" style={{ textAlign:'center', padding:'2.5rem 1rem', color:'var(--color-text-muted)' }}>
+                  <p style={{ fontSize:'1.05rem', marginBottom:'0.5rem', color:'var(--color-pine-dark)' }}>No groups found.</p>
+                  <p>Try a different search, or start one yourself.</p>
+                </div>
+              ) : (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'1.25rem' }}>
+                  {filtered.map(g=>(
+                    <GroupCard key={g.id} group={g} currentUserId={currentUser?.id??null} membership={getMembership(g.id)} onAction={fetchGroups}/>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'feed' && (
+            <GroupFeed memberships={memberships} currentUser={currentUser} />
+          )}
+        </main>
+
+        {/* Right Sidebar */}
+        <aside className="communities-right-sidebar">
+          {/* Meetups Board */}
+          <div className="card" style={{ padding:'1.25rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
+            <h3 style={{ margin: 0, color: 'var(--color-pine-dark)', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🤝 Upcoming Meetups</h3>
+            <p style={{ marginTop: '0.25rem', color: 'var(--color-text-muted)', fontSize: '0.8rem', lineHeight: 1.4 }}>Connect offline for local plant swaps or hands-on classes.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+              <div style={{ background: '#fbf7f0', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid #efe4d3' }}>
+                <span style={{ fontSize: '0.7rem', background: 'var(--color-pine-primary)', color: 'white', padding: '0.15rem 0.45rem', borderRadius: 4, fontWeight: 700 }}>May 18</span>
+                <h5 style={{ margin: '0.35rem 0 0.1rem', color: 'var(--color-pine-dark)', fontSize: '0.85rem' }}>Spring Seedling Swap</h5>
+                <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>Blue Ridge Center · 10 AM</p>
+              </div>
+              <div style={{ background: '#fbf7f0', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid #efe4d3' }}>
+                <span style={{ fontSize: '0.7rem', background: 'var(--color-pine-primary)', color: 'white', padding: '0.15rem 0.45rem', borderRadius: 4, fontWeight: 700 }}>Jun 05</span>
+                <h5 style={{ margin: '0.35rem 0 0.1rem', color: 'var(--color-pine-dark)', fontSize: '0.85rem' }}>Soapmaking Class</h5>
+                <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>Artisan Studio · 2:30 PM</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
     </div>
   );
 }

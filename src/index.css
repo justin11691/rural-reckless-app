@@ -137,3 +137,29 @@ button:active {
   font-weight: 700;
   font-family: 'Bitter', serif;
 }
+
+/* Communities Layout */
+.communities-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 280px;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .communities-layout {
+    grid-template-columns: 200px 1fr;
+  }
+  .communities-right-sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .communities-layout {
+    grid-template-columns: 1fr;
+  }
+  .communities-left-sidebar {
+    display: none;
+  }
+}

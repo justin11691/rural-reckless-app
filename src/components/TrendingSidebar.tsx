@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowRight, Calendar, Users } from 'lucide-react';
+import { AdSenseUnit } from './AdSenseUnit';
 
 export function TrendingSidebar() {
   const [trending, setTrending] = useState<any[]>([]);
@@ -187,6 +188,9 @@ export function TrendingSidebar() {
           </div>
         )}
       </div>
+
+      {/* AdSense Unit */}
+      <AdSenseUnit slotId="sidebar_ad_938472" format="rectangle" />
     </aside>
   );
 }
