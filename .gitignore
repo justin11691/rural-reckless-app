@@ -7,10 +7,22 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies and Builds
 node_modules
 dist
 dist-ssr
 *.local
+
+# Secrets & Environment Variables (Never commit keys or secrets)
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+api_keys.json
+*secret*
+*.pem
+*.key
 
 # Editor directories and files
 .vscode/*
@@ -23,5 +35,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local Netlify folder
+# Cloudflare, Supabase & Platform Cache
+.wrangler
 .netlify
+.supabase
+supabase/.temp

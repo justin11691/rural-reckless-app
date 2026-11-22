@@ -50,7 +50,7 @@ function ManagePanel({ group, currentUserId, onClose, onRefresh }: {
     if (data) {
       // Fetch profiles separately
       const uids = [...new Set(data.map((m:any)=>m.user_id))];
-      let profileMap: Record<string,any> = {};
+      const profileMap: Record<string,any> = {};
       if (uids.length > 0) {
         const { data: profs } = await supabase.from('profiles').select('id,username,full_name,avatar_url').in('id', uids);
         (profs||[]).forEach((p:any)=>{ profileMap[p.id]=p; });
@@ -316,7 +316,7 @@ export function GroupPage() {
       parts.push(`# ${postType === 'recipe' ? '🍳 Recipe' : '🧵 Pattern'}: ${structuredForm.title}`);
       
       if (structuredForm.prepTime || structuredForm.cookTime) {
-        let times = [];
+        const times = [];
         if (structuredForm.prepTime) times.push(`**Prep**: ${structuredForm.prepTime}`);
         if (structuredForm.cookTime) times.push(`**Time**: ${structuredForm.cookTime}`);
         parts.push(times.join(' | '));

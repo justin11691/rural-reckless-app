@@ -79,7 +79,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     }
 
     const userIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
-    let profileMap: Record<string, any> = {};
+    const profileMap: Record<string, any> = {};
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
         .from('profiles')
@@ -89,9 +89,9 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
     }
 
     const postIds = (postsData || []).map((p: any) => p.id);
-    let likesMap: Record<string, { count: number, me: boolean }> = {};
-    let commentsMap: Record<string, any[]> = {};
-    let favoritedPostIds = new Set<string>();
+    const likesMap: Record<string, { count: number, me: boolean }> = {};
+    const commentsMap: Record<string, any[]> = {};
+    const favoritedPostIds = new Set<string>();
     
     if (postIds.length > 0) {
       const { data: likes } = await supabase
@@ -106,7 +106,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
         .order('created_at', { ascending: true });
 
       const commentUserIds = [...new Set((comments||[]).map((c:any)=>c.user_id))];
-      let commentProfileMap: Record<string,any> = {};
+      const commentProfileMap: Record<string,any> = {};
       if (commentUserIds.length > 0) {
         const { data: cProfiles } = await supabase
           .from('profiles')
@@ -203,7 +203,7 @@ function SocialFeed({ currentUser, currentUserProfile }: { currentUser: any; cur
       parts.push(`# ${postType === 'recipe' ? '🍳 Recipe' : '🧵 Pattern'}: ${structuredForm.title}`);
       
       if (structuredForm.prepTime || structuredForm.cookTime) {
-        let times = [];
+        const times = [];
         if (structuredForm.prepTime) times.push(`**Prep**: ${structuredForm.prepTime}`);
         if (structuredForm.cookTime) times.push(`**Time**: ${structuredForm.cookTime}`);
         parts.push(times.join(' | '));
@@ -642,11 +642,11 @@ function ForYouFeed({ currentUser }: { currentUser: any }) {
     }
 
     // Step 2: fetch digital products matching interests, fallback to latest if none
-    let digiQuery = supabase.from('digital_products').select('*');
+    const digiQuery = supabase.from('digital_products').select('*');
     const { data: digitalItems } = await digiQuery.order('created_at', { ascending: false }).limit(20);
 
     // Step 3: fetch local handmade / rummage market listings
-    let localQuery = supabase.from('market_listings').select('*').eq('is_active', true);
+    const localQuery = supabase.from('market_listings').select('*').eq('is_active', true);
     const { data: localItems } = await localQuery.order('created_at', { ascending: false }).limit(20);
 
     // Step 4: Blend and filter with interest & location algorithm
