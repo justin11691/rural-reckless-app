@@ -1,0 +1,27 @@
+# Rural & Reckless Workspace Notes (`ruralandreckless.com`)
+
+- **Canonical Path**: `D:\Projects\ruralandreckless`
+- **Production Domain**: `https://ruralandreckless.com`
+- **Cloudflare Pages Deployments**:
+  - **Full-Stack Community & Marketplace App**:
+    - Cloudflare Pages Project: `rural-reckless-app`
+    - Branch: `master` (`justin11691/rural-reckless-app.git`)
+    - Auto-deploys on push to `master`
+    - CLI Deployment: `npx wrangler pages deploy dist --project-name=rural-reckless-app --branch=master`
+  - **Media LLC Landing Page & Quote Estimator**:
+    - Cloudflare Pages Project: `rural-and-reckless`
+    - Directory: `D:\Projects\ruralandreckless\landing`
+    - CLI Deployment: `npx wrangler pages deploy landing --project-name=rural-and-reckless --branch=main`
+- **Backend / Database**:
+  - Supabase PostgreSQL: `crjfaoxwlmqubmpsyodo` (`https://crjfaoxwlmqubmpsyodo.supabase.co`)
+  - Schema & RLS Migrations: `supabase/migrations/20261122000000_security_and_rls_hardening.sql`
+  - Edge Functions: `functions/api/contact.js` (Lead ingestion), `functions/api/health.js` (Health check)
+  - Notifications: Cloudflare MailChannels transactional email (`leads@ruralandreckless.com`)
+- **Build, Lint & Test**:
+  - Typecheck: `npx tsc -b`
+  - Lint: `npm run lint`
+  - Production Build: `npm run build`
+- **Brand & Assets**:
+  - Master Design Tokens: `brand/brand_tokens.css` (Kit #02 Stone & Wild Sage)
+  - High-Res Show Low Photography: `assets/photography/show_low/`
+  - Ad Creatives & Marketing Copy: `marketing/ads/`

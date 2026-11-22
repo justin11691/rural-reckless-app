@@ -1,0 +1,37 @@
+/* 
+  Rural & Reckless Media LLC — Master Design Tokens
+  Design System: Marketing Kit #02 — Stone & Wild Sage
+  Keywords: WILD • TIMELESS • AUTHENTIC • PURPOSEFUL
+  Motto: UNSCRIPTED • UNMATCHED • UNAPOLOGETIC.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Brand Palette: Kit #02 Stone & Wild Sage */
+  --primary: #3F4A43;          /* Deep Forest Sage */
+  --primary-hover: #29322D;     /* Darker Forest Sage */
+  --primary-light: #7A847A;     /* Wild Sage Green */
+  --accent: #7A847A;            /* Wild Sage Green */
+  --accent-gold: #7A847A;       /* Wild Sage for highlights */
+
+  /* Backgrounds: Stone & Slate */
+  --bg: #F2F0ED;               /* Alabaster Stone */
+  --bg-card: #FFFFFF;
+  --bg-dark: #1C1F1B;           /* Charcoal Ink */
+  --bg-darker: #131613;         /* Deep Charcoal Ink */
+  --bg-services: #E6E3DC;       /* Aged Slate Stone for section depth */
+
+  /* Text: Charcoal Ink & Deep Sage */
+  --text: #1C1F1B;              /* Charcoal Ink text */
+  --text-heading: #1C1F1B;      /* Charcoal Ink heading */
+  --text-muted: #4A524C;        /* Deep Sage Muted */
+  --text-light: #7A847A;        /* Wild Sage */
+  --text-white: #FFFFFF;
+  --text-on-dark: #F2F0ED;
+
+  /* Typography */
+  --font-heading: 'Outfit', 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-subheading: 'Outfit', sans-serif;
+}
